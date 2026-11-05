@@ -4,9 +4,9 @@ Cada tarefa é uma branch e um PR. A ordem é a recomendada. Os detalhes de cada
 
 ## 0. Protótipo clicável (opcional, antes do MVP)
 HTML estático em `prototipo/`, com dados fictícios, para validar com o secretariado e com 2–3 profissionais.
-- [ ] Vistas: Profissional, Secretariado, Coordenação e Admin, com um seletor de perfil no topo.
-- [ ] Grelha do polo (com detalhes para o staff; só "Ocupado" para os profissionais), "O meu horário", fila de pedidos com conflito e sugestão de outra sala, formulário de pedido.
-- [ ] Identidade visual do novo site (logótipo original, azuis e verde-lima, fonte Atkinson Hyperlegible).
+- [x] Vistas: Profissional, Secretariado, Coordenação e Admin, com um seletor de perfil no topo.
+- [x] Grelha do polo (com detalhes para o staff; só "Ocupado" para os profissionais), "O meu horário", fila de pedidos com conflito e sugestão de outra sala, formulário de pedido.
+- [x] Identidade visual do novo site (espaço para o logótipo real em `prototipo/assets/logo.png`, azuis e verde-lima, fonte Atkinson Hyperlegible).
 
 ## 1. Esqueleto e infraestrutura
 - [ ] Projeto Django 5.2 LTS em `portal/`, com a configuração lida de variáveis de ambiente, idioma `pt-pt` e fuso `Europe/Lisbon`.
