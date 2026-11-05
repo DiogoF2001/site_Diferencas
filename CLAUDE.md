@@ -12,18 +12,23 @@ Repositório do novo site do CDI Diferenças e do **portal** (área reservada) p
 ## Forma de trabalhar
 
 1. Uma tarefa do roadmap por branch (`feat/<nº>-<nome-curto>`) e um PR por tarefa.
-2. Antes de escrever código, apresenta um plano curto e espera aprovação. O plano inclui: modelos e campos, ficheiros a criar ou alterar, permissões envolvidas e os testes que vais escrever.
-3. Cada regra de permissão tem testes **positivos e negativos**. Por exemplo: "secretariado do polo A não vê detalhes no polo B".
-4. Antes de abrir o PR, corre os testes, o lint e o `check --deploy`. Os comandos estão na secção "Comandos".
-5. Mensagens de commit em inglês, no imperativo e curtas.
+2. Não esperas pela aprovação do plano. O controlo passa a ser a revisão do PR.
+3. As decisões técnicas são tuas: arquitetura interna, bibliotecas já aprovadas, nomes, estrutura e testes.
+4. Só paras para perguntar quando faltar uma regra de negócio que não está no plano, ou quando a decisão for irreversível ou tocar na segurança: permissões, dados pessoais, credenciais, migrações destrutivas. Perguntas numa linha, com a tua recomendação.
+5. Cada regra de permissão tem testes **positivos e negativos**. Por exemplo: "secretariado do polo A não vê detalhes no polo B".
+6. Antes de abrir o PR, corre os testes, o lint e o `check --deploy`. Os comandos estão na secção "Comandos".
+7. Mensagens de commit em inglês, no imperativo e curtas.
+8. O PR de cada tarefa tem uma descrição curta e uma ligação para o ficheiro de registo dessa tarefa.
+9. Nas mensagens para o utilizador, um resumo de no máximo 5 linhas no fim de cada tarefa: o que foi feito, o estado da CI e o que precisa dele.
+10. Todo o detalhe fica em `docs/registo/`: um ficheiro por tarefa (`tarefa-NN-nome.md`), escrito à medida que trabalhas e não só no fim, e indexado no `README.md` dessa pasta, que indica as secções obrigatórias.
 
 ## Estrutura do repositório
 
 ```
-portal/      Aplicação Django (área reservada)
+portal/      Aplicação Django (área reservada): core/ é o núcleo, salas/ o módulo de salas
 site/        Site público (a definir; não mexer sem pedido)
 prototipo/   Protótipo clicável estático (HTML, dados fictícios)
-docs/        Plano e roadmap
+docs/        Plano, roadmap e registo das tarefas (docs/registo/)
 deploy/      Docker Compose, Caddyfile, scripts de backup
 ```
 
@@ -65,7 +70,7 @@ deploy/      Docker Compose, Caddyfile, scripts de backup
 
 ## Regras de segurança (inegociáveis)
 
-- **Permissões sempre por polo e sempre no servidor.** Usa uma única função central (por exemplo `has_perm_in(user, "salas.approve", location)`). Nunca verifiques nomes de papéis no código das vistas. Cada módulo declara as suas permissões com prefixo (`salas.*`, `core.*`).
+- **Permissões sempre por polo e sempre no servidor.** Usa uma única função central, `core.permissions.has_perm_in(user, "salas.approve", location)`. Nunca verifiques nomes de papéis no código das vistas. Cada módulo declara as suas permissões com prefixo (`salas.*`, `core.*`) no seu `permissions.py`.
 - **Livre/ocupado:** os querysets e serializers das reservas de outras pessoas só devolvem início, fim e "ocupado". Esconder campos só no template não chega.
 - **Gestão de contas:**
   - cada pessoa só atribui papéis até ao seu próprio nível no polo;

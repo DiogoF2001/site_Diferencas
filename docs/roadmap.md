@@ -25,10 +25,10 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [x] Utilizadores da base de dados separados (dono sem superutilizador, app, backup só de leitura), `compilemessages` na imagem e WhiteNoise testado, em `deploy/tests/check-production.sh`.
 
 ## 3. Motor de permissões
-- [ ] Registo de permissões por módulo, mais o mapeamento papel → permissões.
-- [ ] Função central `has_perm_in(user, perm, location)` e helpers para querysets.
-- [ ] Teto de atribuição (até ao próprio nível) e regras das ações sobre a conta inteira (todos os polos da pessoa).
-- [ ] Testes em matriz: papel × permissão × mesmo polo / outro polo.
+- [x] Registo de permissões por módulo, mais o mapeamento papel → permissões.
+- [x] Função central `has_perm_in(user, perm, location)` e helpers para querysets.
+- [x] Teto de atribuição (até ao próprio nível) e regras das ações sobre a conta inteira (todos os polos da pessoa).
+- [x] Testes em matriz: papel × permissão × mesmo polo / outro polo.
 
 ## 4. Contas e autenticação
 - [ ] Convites (link de uso único, 48 h) e recuperação de palavra-passe por e-mail (SMTP configurável).

@@ -82,6 +82,8 @@ Não depende de Google nem de Microsoft. A única dependência externa é um ser
 
 A área técnica inclui os logs técnicos, o estado do sistema, a configuração do SMTP e dos segredos, a criação de polos, as funcionalidades que se ligam e desligam e um modo "ver como utilizador" (só de leitura e registado).
 
+**Polo inativo:** enquanto um polo estiver inativo, as filiações nesse polo não dão nenhuma permissão. O Admin mantém o acesso, para o poder gerir e reativar. As filiações não mudam, por isso reativar o polo repõe tudo.
+
 ### Regras de gestão de contas
 
 - **Acesso a um polo:** uma pessoa só tem acesso a um polo depois de o secretariado ou a coordenação *desse* polo lhe criar uma filiação lá.
