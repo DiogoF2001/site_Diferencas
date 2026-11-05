@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal Diferenças — Protótipo</title>
+  <meta name="description" content="Protótipo clicável do portal Diferenças, com dados fictícios.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/400.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.3.0/700.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.18.1/dist/event-calendar.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main" id="skip-link">Saltar para o conteúdo</a>
+
+  <div class="proto-band" role="note">
+    <strong>Protótipo — dados fictícios</strong>
+    <span class="proto-band-note">O que fizeres aqui fica só em memória.</span>
+    <button type="button" class="btn btn-small btn-on-dark" id="reset-data">Repor dados</button>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="Diferenças — início do portal">
+      <img id="brand-logo" src="assets/logo.png" alt="Diferenças">
+      <span id="brand-text" class="brand-text" hidden>Diferenças</span>
+    </a>
+    <div class="topbar-controls">
+      <div class="control">
+        <label for="profile-select">Perfil</label>
+        <select id="profile-select"></select>
+      </div>
+      <div class="control">
+        <label for="location-select">Polo</label>
+        <select id="location-select"></select>
+      </div>
+    </div>
+    <p class="persona" id="persona"></p>
+  </header>
+
+  <nav id="main-nav" class="main-nav" aria-label="Principal"></nav>
+
+  <main id="main" tabindex="-1"></main>
+
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.18.1/dist/event-calendar.min.js"></script>
+  <script src="data.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+  <script src="views-comum.js"></script>
+  <script src="views-staff.js"></script>
+  <script src="views-gestao.js"></script>
+</body>
+</html>
