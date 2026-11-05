@@ -7,7 +7,8 @@ Um ficheiro por tarefa do [roadmap](../roadmap.md), escrito à medida que se tra
 | 0. Protótipo clicável | feita | [#2](https://github.com/DiogoF2001/site_Diferencas/pull/2), [#3](https://github.com/DiogoF2001/site_Diferencas/pull/3) | [tarefa-00-prototipo.md](tarefa-00-prototipo.md) |
 | 1. Esqueleto e infraestrutura | feita | [#1](https://github.com/DiogoF2001/site_Diferencas/pull/1) | [tarefa-01-esqueleto.md](tarefa-01-esqueleto.md) |
 | 2. Núcleo: utilizadores, polos e filiações | feita | [#4](https://github.com/DiogoF2001/site_Diferencas/pull/4) | [tarefa-02-nucleo.md](tarefa-02-nucleo.md) |
-| 3. Motor de permissões | em revisão | [#5](https://github.com/DiogoF2001/site_Diferencas/pull/5) | [tarefa-03-permissoes.md](tarefa-03-permissoes.md) |
+| 3. Motor de permissões | feita | [#5](https://github.com/DiogoF2001/site_Diferencas/pull/5) | [tarefa-03-permissoes.md](tarefa-03-permissoes.md) |
+| 4. Contas e autenticação | em revisão | PR a abrir | [tarefa-04-contas.md](tarefa-04-contas.md) |
 
 ## Como escrever um registo
 

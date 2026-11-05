@@ -130,6 +130,15 @@ app expect_denied "app cannot drop tables" "DROP TABLE core_location"
 app expect_denied "app cannot alter tables" "ALTER TABLE core_location ADD COLUMN check_app int"
 app expect_denied "app cannot truncate tables" "TRUNCATE core_location CASCADE"
 app expect_denied "app cannot create schemas" "CREATE SCHEMA check_app"
+app expect_allowed "app can add and read account audit events" \
+    "BEGIN;
+     INSERT INTO core_auditevent (created_at, action, email, details)
+         VALUES (now(), 'login_failed', 'x@example.test', '{}');
+     SELECT count(*) FROM core_auditevent;
+     ROLLBACK"
+app expect_denied "app cannot change account audit events" "UPDATE core_auditevent SET email = ''"
+app expect_denied "app cannot delete account audit events" "DELETE FROM core_auditevent"
+app expect_denied "app cannot truncate account audit events" "TRUNCATE core_auditevent"
 
 echo "== Admin account"
 if compose run --rm create-admin >/dev/null && compose run --rm create-admin >/dev/null; then
@@ -173,9 +182,14 @@ expect_equal "translations were compiled in the image" polo \
 
 if output=$(compose exec -T -e PORTAL_ADMIN_EMAIL="$PORTAL_ADMIN_EMAIL" \
     -e PORTAL_ADMIN_PASSWORD="$PORTAL_ADMIN_PASSWORD" app python - 2>&1 <<'PY'
+import base64
+import hashlib
+import hmac
 import http.cookies
 import os
 import re
+import struct
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -210,11 +224,26 @@ def fetch(path, data=None, **headers):
     return response
 
 
-login_page = fetch("/admin/login/")
+def totp(secret):
+    key = base64.b32decode(secret)
+    digest = hmac.new(key, struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    return f"{(struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1_000_000:06d}"
+
+
+def csrf(html):
+    return re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html).group(1)
+
+
+backoffice_login = fetch("/admin/login/?next=/admin/")
+assert backoffice_login.status == 302, f"backoffice login: {backoffice_login.status}"
+assert backoffice_login.headers["Location"].startswith("/conta/entrar/"), "not the portal login"
+
+login_page = fetch("/conta/entrar/")
 assert login_page.status == 200, f"login page: {login_page.status}"
 html = login_page.read().decode()
 
-stylesheet = re.search(r'/static/admin/css/base\.[0-9a-f]{12}\.css', html)
+stylesheet = re.search(r'/static/core/portal\.[0-9a-f]{12}\.css', html)
 assert stylesheet, "the login page does not link a hashed stylesheet"
 css = fetch(stylesheet.group(0), **{"Accept-Encoding": "gzip"})
 assert css.status == 200, f"stylesheet: {css.status}"
@@ -223,23 +252,36 @@ assert css.headers["Content-Encoding"] == "gzip", css.headers["Content-Encoding"
 assert "immutable" in css.headers["Cache-Control"], css.headers["Cache-Control"]
 assert fetch("/static/admin/css/nao-existe.css").status == 404, "missing file"
 
-token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html).group(1)
 login = fetch(
-    "/admin/login/",
+    "/conta/entrar/",
     {
-        "csrfmiddlewaretoken": token,
+        "csrfmiddlewaretoken": csrf(html),
         "username": os.environ["PORTAL_ADMIN_EMAIL"],
         "password": os.environ["PORTAL_ADMIN_PASSWORD"],
         "next": "/admin/",
     },
-    Referer=f"https://{HOST}/admin/login/",
+    Referer=f"https://{HOST}/conta/entrar/",
 )
 assert login.status == 302, f"login: {login.status}"
-assert fetch("/admin/").status == 200, "backoffice after login"
+
+# 2FA is mandatory for the admin: the backoffice waits until it is set up.
+before = fetch("/admin/")
+assert before.status == 302, f"backoffice before 2FA: {before.status}"
+setup_url = before.headers["Location"]
+assert setup_url.startswith("/conta/2fa/configurar/"), setup_url
+setup = fetch(setup_url).read().decode()
+secret = re.search(r'class="secret">([A-Z2-7]+)<', setup).group(1)
+confirmed = fetch(
+    setup_url,
+    {"csrfmiddlewaretoken": csrf(setup), "token": totp(secret), "next": "/admin/"},
+    Referer=f"https://{HOST}{setup_url}",
+)
+assert confirmed.status == 302, f"2FA setup: {confirmed.status}"
+assert fetch("/admin/").status == 200, "backoffice after 2FA"
 PY
 ); then
-    pass "WhiteNoise serves the backoffice's hashed, compressed static files"
-    pass "the admin logs in to the backoffice, using the app's database user"
+    pass "WhiteNoise serves the portal's hashed, compressed static files"
+    pass "the admin logs in, sets up 2FA and opens the backoffice, using the app's database user"
 else
     fail "WhiteNoise and the backoffice login" "$output"
 fi

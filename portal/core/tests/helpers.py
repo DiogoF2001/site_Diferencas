@@ -2,6 +2,8 @@ import datetime
 import os
 
 from django.utils import timezone
+from django_otp import DEVICE_ID_SESSION_KEY
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core.models import Membership, Mentorship, Role, Subrole, User
 
@@ -12,6 +14,8 @@ PRODUCTION_ENV = {
     "DB_NAME": "unused",
     "DB_USER": "unused",
     "DB_PASSWORD": "unused",
+    "EMAIL_HOST": "smtp.example.test",
+    "DEFAULT_FROM_EMAIL": "portal@example.test",
 }
 
 
@@ -20,7 +24,7 @@ def subprocess_env(**overrides):
     inherited = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith(("DJANGO_", "DB_", "WORKER_"))
+        if not key.startswith(("DJANGO_", "DB_", "WORKER_", "EMAIL_", "DEFAULT_FROM_", "PORTAL_"))
     }
     return {**inherited, **overrides}
 
@@ -60,3 +64,15 @@ def make_mentorship(mentor, mentee, location, *, start=-30, end=30):
         start_date=days_from_today(start),
         end_date=None if end is None else days_from_today(end),
     )
+
+
+def login_verified(client, user):
+    """Sign in with the second factor already given, as after the code step."""
+    device, _created = TOTPDevice.objects.get_or_create(
+        user=user, name="default", defaults={"confirmed": True}
+    )
+    client.force_login(user)
+    session = client.session
+    session[DEVICE_ID_SESSION_KEY] = device.persistent_id
+    session.save()
+    return device

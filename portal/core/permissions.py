@@ -15,6 +15,8 @@ from django.utils import timezone
 from core.models import Location, Membership, Mentorship, Role, Subrole, User
 
 ROLE_LEVELS = {Role.PROFESSIONAL: 1, Role.SECRETARIAT: 2, Role.COORDINATION: 3}
+# Plan, section 5: 2FA is mandatory for the admin and for anyone who manages a location.
+TWO_FACTOR_ROLES = frozenset({Role.SECRETARIAT, Role.COORDINATION})
 
 MANAGE_MEMBERS = "core.manage_members"
 
@@ -181,6 +183,44 @@ def can_manage_account(actor, target):
         and target_levels[location.pk] <= role_level_in(actor, location)
         for location in locations
     )
+
+
+def has_portal_access(user):
+    """Whether the account may sign in: the admin, or an active membership in an active location.
+
+    The end date of a membership is the last day with access, in Lisbon, so an intern's access
+    ends on its own at midnight. Someone whose memberships have yet to start can set a password
+    from the invitation, but only signs in from the start date.
+    """
+    if is_admin(user):
+        return True
+    if not _can_hold_memberships(user):
+        return False
+    return Membership.objects.active_on().filter(user=user, location__is_active=True).exists()
+
+
+def requires_two_factor(user):
+    """Counted from the membership dates alone: more 2FA never takes access away from anyone."""
+    if is_admin(user):
+        return True
+    if not _can_hold_memberships(user):
+        return False
+    return Membership.objects.active_on().filter(user=user, role__in=TWO_FACTOR_ROLES).exists()
+
+
+def members_of(location) -> QuerySet:
+    """People with an active or future membership in the location."""
+    memberships = Membership.objects.filter(location=location).overlapping(timezone.localdate())
+    return User.objects.filter(pk__in=memberships.values("user"))
+
+
+def can_send_recovery_link(actor, target, location):
+    """Plan, section 5: whoever manages members in a location where the target is or will be."""
+    if target.is_superuser or not target.is_active:
+        return False
+    if not has_perm_in(actor, MANAGE_MEMBERS, location):
+        return False
+    return members_of(location).filter(pk=target.pk).exists()
 
 
 def mentees_of(user, location) -> QuerySet:

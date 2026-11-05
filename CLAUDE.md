@@ -122,6 +122,8 @@ docker compose -f deploy/docker-compose.yml up -d --build --wait
 docker compose -f deploy/docker-compose.yml --profile ops run --rm migrate
 docker compose -f deploy/docker-compose.yml --profile ops run --rm create-admin
 docker compose -f deploy/docker-compose.yml exec backup /usr/local/bin/backup.sh once
+# Emergência: o admin perdeu o 2FA (fica na auditoria de contas, sem autor)
+docker compose -f deploy/docker-compose.yml exec app python manage.py reset_2fa admin@example.test
 
 # Verificação em contentores reais: utilizadores da base de dados, backup, traduções, WhiteNoise e
 # login no backoffice. Não precisa de .env e usa uma pilha própria, que apaga no fim.
@@ -135,5 +137,7 @@ deploy/tests/check-production.sh
   - `PORTAL_DB_USER` é usado pela `app`, pelo `worker` e pelo `create-admin`, e não é dono de nenhuma tabela;
   - `PORTAL_BACKUP_USER` é usado pelo `backup` e só tem `pg_read_all_data`.
 - O `init-roles.sh` só corre num volume novo. Mudar estes utilizadores numa base de dados existente exige fazer as alterações à mão.
-- O `ensure_admin` só usa a palavra-passe do ambiente ao criar a conta. Para a repor numa emergência, usa o `changepassword` do Django.
+- O `ensure_admin` só usa a palavra-passe do ambiente ao criar a conta. Para a repor numa emergência, usa o `changepassword` do Django. Para o 2FA, usa o `reset_2fa`.
+- Em produção, o SMTP é obrigatório (`EMAIL_HOST`, `DEFAULT_FROM_EMAIL`). Em desenvolvimento, sem `EMAIL_HOST`, os e-mails aparecem na consola da `app`.
+- As tabelas só de acrescentar retiram UPDATE/DELETE/TRUNCATE ao utilizador da app na própria migração, com `core.db.revoke_changes("<tabela>")`. O `check-production.sh` confirma-o com o utilizador real.
 - O Dependabot não atualiza a imagem do Postgres em `.github/workflows/ci.yml`. A CI falha até essa linha ser atualizada à mão para a mesma versão.

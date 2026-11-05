@@ -1,0 +1,38 @@
+{% load i18n static %}<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}{% endblock %} · {% translate "Diferenças portal" %}</title>
+  <link rel="stylesheet" href="{% static 'core/portal.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}">
+      <img src="{% static 'core/logo.png' %}" alt="">
+      <span>{% translate "Diferenças portal" %}</span>
+    </a>
+    {% if user.is_authenticated %}
+      <div class="account">
+        <span class="user-name">{{ user.full_name }}</span>
+        <a href="{% url 'password_change' %}">{% translate "Change password" %}</a>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="btn btn-small btn-on-dark" type="submit">{% translate "Sign out" %}</button>
+        </form>
+      </div>
+    {% endif %}
+  </header>
+  <main class="main{% block main_class %}{% endblock %}">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="alert {% if message.level_tag == 'error' %}alert-error{% else %}alert-ok{% endif %}" role="status">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

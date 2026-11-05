@@ -31,13 +31,13 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [x] Testes em matriz: papel × permissão × mesmo polo / outro polo.
 
 ## 4. Contas e autenticação
-- [ ] Convites (link de uso único, 48 h) e recuperação de palavra-passe por e-mail (SMTP configurável).
-- [ ] 2FA TOTP, obrigatório para admin, coordenação e secretariado.
-- [ ] Limite de tentativas de login e expiração de sessões.
-- [ ] Desativação de contas (nunca apagar). O fim da filiação de estagiária retira o acesso automaticamente.
-- [ ] Gestão de membros do polo (criar, adicionar uma conta existente ao polo, remover do polo).
-- [ ] Listagem da coordenação: profissionais do polo com os papéis no polo e, opcionalmente, noutros polos (sem atividade). Exportação em CSV.
-- [ ] `AuditEvent` em todas estas ações; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
+- [x] Convites (link de uso único, 48 h) e recuperação de palavra-passe por e-mail (SMTP configurável).
+- [x] 2FA TOTP, obrigatório para admin, coordenação e secretariado.
+- [x] Limite de tentativas de login e expiração de sessões.
+- [x] Desativação de contas (nunca apagar). O fim da filiação de estagiária retira o acesso automaticamente.
+- [x] Gestão de membros do polo (criar, adicionar uma conta existente ao polo, remover do polo).
+- [x] Listagem da coordenação: profissionais do polo com os papéis no polo e, opcionalmente, noutros polos (sem atividade). Exportação em CSV.
+- [x] `AuditEvent` em todas estas ações; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
 
 ## 5. Salas, salas exclusivas, bloqueios e regras
 - [ ] `Room`, `RoomAssignment` (blocos semanais com início e fim; libertação prevista mas desligada por flag).

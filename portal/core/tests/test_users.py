@@ -6,6 +6,7 @@ from django.db import IntegrityError, transaction
 from django.utils import translation
 
 from core.models import Location, User
+from core.tests.helpers import days_from_today
 
 pytestmark = pytest.mark.django_db
 
@@ -43,8 +44,9 @@ def test_database_rejects_uppercase_email_written_around_the_model(make_user):
         User.objects.filter(pk=user.pk).update(email="PESSOA@example.test")
 
 
-def test_login_works_with_any_capitalisation_of_the_email(make_user):
+def test_login_works_with_any_capitalisation_of_the_email(make_user, location, make_professional):
     user = make_user("pessoa@example.test", password="palavra-longa-e-rara")
+    make_professional(user, location, start_date=days_from_today(-1), end_date=None)
 
     assert authenticate(username="PESSOA@Example.test", password="palavra-longa-e-rara") == user
 

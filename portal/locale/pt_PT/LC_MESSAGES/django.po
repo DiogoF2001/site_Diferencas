@@ -2,12 +2,61 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Portal Diferenças\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 14:16+0000\n"
+"POT-Creation-Date: 2026-11-05 19:02+0000\n"
 "Language: pt_PT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Email address"
+msgstr "Endereço de e-mail"
+
+msgid "Wrong email address or password."
+msgstr "E-mail ou palavra-passe incorretos."
+
+msgid "Too many failed attempts. Please try again in a few minutes."
+msgstr "Demasiadas tentativas falhadas. Tente de novo daqui a alguns minutos."
+
+msgid ""
+"This account has no access to the portal at the moment. Please contact your "
+"location's secretariat."
+msgstr ""
+"Esta conta não tem acesso ao portal neste momento. Contacte o secretariado "
+"do seu polo."
+
+msgid "Full name"
+msgstr "Nome completo"
+
+msgid "Only for a new account. An existing account keeps its name."
+msgstr "Só para uma conta nova. Uma conta que já existe mantém o nome."
+
+msgid "Role"
+msgstr "Papel"
+
+msgid "Subrole"
+msgstr "Subpapel"
+
+msgid "Only for professionals."
+msgstr "Só para profissionais."
+
+msgid "Start date"
+msgstr "Data de início"
+
+msgid "End date"
+msgstr "Data de fim"
+
+msgid "The last day with access. Required for interns."
+msgstr "O último dia com acesso. Obrigatória para estagiárias."
+
+msgid "A new account needs a name."
+msgstr "Uma conta nova precisa de um nome."
+
+msgid "Code"
+msgstr "Código"
+
+msgid "The code has 6 digits."
+msgstr "O código tem 6 algarismos."
 
 msgid "Creates the admin account from the environment. Safe to run repeatedly."
 msgstr ""
@@ -28,6 +77,20 @@ msgstr "Este endereço de e-mail pertence a uma conta que não é a de admin."
 
 msgid "The admin account already exists; nothing to create."
 msgstr "A conta de admin já existe; não há nada a criar."
+
+msgid ""
+"Removes the two-factor devices of an account, for when the admin loses "
+"theirs."
+msgstr ""
+"Remove os dispositivos de autenticação de dois fatores de uma conta, para "
+"quando o admin perde o seu."
+
+msgid "There is no account with this email address."
+msgstr "Não há nenhuma conta com este endereço de e-mail."
+
+msgid "Two-factor authentication reset. Set it up again at next sign-in."
+msgstr ""
+"Autenticação de dois fatores reposta. Configure-a de novo na próxima entrada."
 
 msgid "email address"
 msgstr "endereço de e-mail"
@@ -139,3 +202,343 @@ msgstr ""
 msgid "The mentee needs an intern membership in this location on these dates."
 msgstr ""
 "A orientanda precisa de uma filiação como Estagiária neste polo nestas datas."
+
+msgid "Invitation sent"
+msgstr "Convite enviado"
+
+msgid "Recovery link sent"
+msgstr "Link de recuperação enviado"
+
+msgid "Password set"
+msgstr "Palavra-passe definida"
+
+msgid "Password changed"
+msgstr "Palavra-passe alterada"
+
+msgid "Membership created"
+msgstr "Filiação criada"
+
+msgid "Membership changed"
+msgstr "Filiação alterada"
+
+msgid "Membership ended"
+msgstr "Filiação terminada"
+
+msgid "Membership deleted"
+msgstr "Filiação apagada"
+
+msgid "Account deactivated"
+msgstr "Conta desativada"
+
+msgid "Account reactivated"
+msgstr "Conta reativada"
+
+msgid "Two-factor authentication enabled"
+msgstr "Autenticação de dois fatores ativada"
+
+msgid "Two-factor authentication reset"
+msgstr "Autenticação de dois fatores reposta"
+
+msgid "Failed login"
+msgstr "Entrada falhada"
+
+msgid "Failed two-factor code"
+msgstr "Código de dois fatores errado"
+
+msgid "date and time"
+msgstr "data e hora"
+
+msgid "action"
+msgstr "ação"
+
+msgid "done by"
+msgstr "feito por"
+
+msgid "account"
+msgstr "conta"
+
+msgid "details"
+msgstr "detalhes"
+
+msgid "account audit event"
+msgstr "evento da auditoria de contas"
+
+msgid "account audit events"
+msgstr "eventos da auditoria de contas"
+
+msgid "no end date"
+msgstr "sem data de fim"
+
+msgid "Diferenças portal"
+msgstr "Portal Diferenças"
+
+msgid "Change password"
+msgstr "Mudar a palavra-passe"
+
+msgid "Sign out"
+msgstr "Sair"
+
+#, python-format
+msgid "Hello, %(name)s,"
+msgstr "Olá, %(name)s,"
+
+msgid ""
+"An account was created for you on the Diferenças portal. To start, set your "
+"password at this link:"
+msgstr ""
+"Foi criada uma conta para si no Portal Diferenças. Para começar, defina a "
+"sua palavra-passe neste link:"
+
+#, python-format
+msgid ""
+"The link works only once and expires after %(hours)s hours. If it expires, "
+"ask your location's secretariat for a new one."
+msgstr ""
+"O link só funciona uma vez e expira ao fim de %(hours)s horas. Se expirar, "
+"peça outro ao secretariado do seu polo."
+
+#, python-format
+msgid "To sign in, use this email address: %(email)s"
+msgstr "Para entrar, use este endereço de e-mail: %(email)s"
+
+msgid "Invitation to the Diferenças portal"
+msgstr "Convite para o Portal Diferenças"
+
+msgid ""
+"A new password was requested for your account on the Diferenças portal. You "
+"can set it at this link:"
+msgstr ""
+"Foi pedida uma nova palavra-passe para a sua conta no Portal Diferenças. "
+"Pode defini-la neste link:"
+
+#, python-format
+msgid ""
+"The link works only once and expires after %(hours)s hours. If you did not "
+"expect this email, you can ignore it: your current password still works."
+msgstr ""
+"O link só funciona uma vez e expira ao fim de %(hours)s horas. Se não "
+"esperava este e-mail, pode ignorá-lo: a sua palavra-passe atual continua a "
+"funcionar."
+
+msgid "Set a new password on the Diferenças portal"
+msgstr "Definir uma nova palavra-passe no Portal Diferenças"
+
+msgid "Home"
+msgstr "Início"
+
+#, python-format
+msgid "Hello, %(name)s"
+msgstr "Olá, %(name)s"
+
+msgid ""
+"Two-factor authentication protects your account if someone learns your "
+"password."
+msgstr ""
+"A autenticação de dois fatores protege a sua conta se alguém descobrir a sua "
+"palavra-passe."
+
+msgid "Turn on two-factor authentication"
+msgstr "Ativar a autenticação de dois fatores"
+
+msgid "inactive"
+msgstr "inativo"
+
+msgid "Members"
+msgstr "Membros"
+
+msgid "Professionals list"
+msgstr "Listagem de profissionais"
+
+msgid "You have no location yet."
+msgstr "Ainda não tem nenhum polo."
+
+msgid "Sign in"
+msgstr "Entrar"
+
+msgid "Forgot your password?"
+msgstr "Esqueceu-se da palavra-passe?"
+
+msgid "Forgot your password? Ask your location's secretariat for a new link."
+msgstr ""
+"Esqueceu-se da palavra-passe? Peça um novo link ao secretariado do seu polo."
+
+msgid "Add member"
+msgstr "Adicionar membro"
+
+msgid ""
+"A new email address gets an account and an invitation to set the password. "
+"An address that already has an account only gets the new role here."
+msgstr ""
+"Um e-mail novo recebe uma conta e um convite para definir a palavra-passe. "
+"Um e-mail que já tem conta só recebe o novo papel neste polo."
+
+msgid "Add"
+msgstr "Adicionar"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Roles in this location"
+msgstr "Papéis neste polo"
+
+msgid "Account"
+msgstr "Conta"
+
+msgid "Actions"
+msgstr "Ações"
+
+msgctxt "account"
+msgid "active"
+msgstr "ativa"
+
+msgctxt "account"
+msgid "deactivated"
+msgstr "desativada"
+
+msgid "Send password link"
+msgstr "Enviar link da palavra-passe"
+
+msgid "Reset 2FA"
+msgstr "Repor o 2FA"
+
+msgid "Deactivate account"
+msgstr "Desativar a conta"
+
+msgid "Reactivate account"
+msgstr "Reativar a conta"
+
+msgid "Remove from location"
+msgstr "Remover do polo"
+
+msgid "No members yet."
+msgstr "Ainda não há membros."
+
+msgid "Save password"
+msgstr "Guardar a palavra-passe"
+
+msgid "Send link"
+msgstr "Enviar link"
+
+msgid ""
+"If this address has an account, a link is on its way. It works once and "
+"expires after 48 hours."
+msgstr ""
+"Se este endereço tiver uma conta, vai receber um link. Só funciona uma vez e "
+"expira ao fim de 48 horas."
+
+msgid "Back to sign in"
+msgstr "Voltar à entrada"
+
+msgid "Set your password"
+msgstr "Definir a palavra-passe"
+
+#, python-format
+msgid "Account: %(email)s"
+msgstr "Conta: %(email)s"
+
+msgid ""
+"This link is no longer valid. Links work only once and expire after 48 hours."
+msgstr ""
+"Este link já não é válido. Os links só funcionam uma vez e expiram ao fim de "
+"48 horas."
+
+msgid "Ask your location's secretariat for a new link."
+msgstr "Peça um novo link ao secretariado do seu polo."
+
+msgid "Show roles in other locations"
+msgstr "Mostrar os papéis noutros polos"
+
+msgid "Update"
+msgstr "Atualizar"
+
+msgid "Export CSV"
+msgstr "Exportar CSV"
+
+msgid "Roles in other locations"
+msgstr "Papéis noutros polos"
+
+msgid "Two-factor authentication"
+msgstr "Autenticação de dois fatores"
+
+msgid ""
+"Scan the code with an authenticator app, such as Aegis or 2FAS, and enter "
+"the 6 digits it shows."
+msgstr ""
+"Leia o código com uma app de autenticação, como a Aegis ou a 2FAS, e "
+"introduza os 6 algarismos que ela mostrar."
+
+msgid "Or type this key into the app:"
+msgstr "Ou escreva esta chave na app:"
+
+msgid "Turn on"
+msgstr "Ativar"
+
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr "Introduza o código de 6 algarismos da sua app de autenticação."
+
+msgid "Continue"
+msgstr "Continuar"
+
+msgid ""
+"Lost your phone? Ask your location's coordination to reset two-factor "
+"authentication."
+msgstr ""
+"Perdeu o telemóvel? Peça à coordenação do seu polo para repor a autenticação "
+"de dois fatores."
+
+msgid "Your password is set. You can now sign in."
+msgstr "A palavra-passe ficou definida. Já pode entrar."
+
+msgid "Your password has been changed."
+msgstr "A palavra-passe foi alterada."
+
+msgid "Too many emails to this address in the last hour."
+msgstr "Foram enviados demasiados e-mails para este endereço na última hora."
+
+msgid "The invitation email could not be sent. Please try again."
+msgstr "Não foi possível enviar o e-mail do convite. Tente de novo."
+
+msgid "Account created. The invitation was sent by email."
+msgstr "Conta criada. O convite foi enviado por e-mail."
+
+msgid "This email already had an account. Only the membership was added."
+msgstr "Este e-mail já tinha uma conta. Foi acrescentada só a filiação."
+
+#, python-format
+msgid "%(name)s was removed from this location."
+msgstr "%(name)s foi removido(a) deste polo."
+
+#, python-format
+msgid "The account of %(name)s was reactivated."
+msgstr "A conta de %(name)s foi reativada."
+
+#, python-format
+msgid "The account of %(name)s was deactivated."
+msgstr "A conta de %(name)s foi desativada."
+
+#, python-format
+msgid ""
+"Two-factor authentication of %(name)s was reset. They set it up again at "
+"next sign-in."
+msgstr ""
+"A autenticação de dois fatores de %(name)s foi reposta. Volta a ser "
+"configurada na próxima entrada."
+
+msgid "The email could not be sent. Please try again."
+msgstr "Não foi possível enviar o e-mail. Tente de novo."
+
+#, python-format
+msgid "A link was sent to %(email)s."
+msgstr "Foi enviado um link para %(email)s."
+
+msgid "Two-factor authentication is on."
+msgstr "A autenticação de dois fatores está ativa."
+
+msgid "The code is not valid. Check the time on your phone."
+msgstr "O código não é válido. Confirme a hora do telemóvel."
+
+msgid "Too many wrong codes. Please wait a moment and try again."
+msgstr "Demasiados códigos errados. Espere um pouco e tente de novo."

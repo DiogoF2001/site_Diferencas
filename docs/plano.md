@@ -92,8 +92,8 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 - **Até que papel se pode atribuir:** cada pessoa só atribui papéis até ao seu próprio nível no polo. O secretariado pode criar uma conta de secretariado do início ao fim, sem precisar do admin.
 - **E-mail já registado:** cria-se apenas a nova filiação. Quem gere o polo B não vê as reservas nem a atividade dessa pessoa noutros polos.
 - **Palavras-passe:** ninguém define a palavra-passe de outra pessoa. Só se pode enviar um link de recuperação para o e-mail dela.
-- **Ações sobre a conta inteira:** desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em *todos* os polos onde ela tem uma filiação ativa ou futura; as filiações terminadas não contam. Caso contrário, só se pode removê-la do próprio polo.
-- **Listagem da coordenação:** a coordenação tem uma lista dos profissionais do seu polo, com os papéis de cada um nesse polo. Opcionalmente, mostra também os papéis e polos de cada pessoa noutros polos, mas nunca a atividade lá. A lista pode ser exportada em CSV.
+- **Ações sobre a conta inteira:** desativar ou reativar a conta toda, ou repor o 2FA, exige um papel igual ou superior ao dessa pessoa em *todos* os polos onde ela tem uma filiação ativa ou futura; as filiações terminadas não contam. Caso contrário, só se pode removê-la do próprio polo.
+- **Listagem da coordenação:** a coordenação tem uma lista de todas as pessoas com filiação ativa ou futura no seu polo (profissionais, secretariado e coordenação), com os papéis de cada uma nesse polo. Opcionalmente, mostra também os papéis e polos de cada pessoa noutros polos, mas nunca a atividade lá. A lista pode ser exportada em CSV.
 
 ### Orientação
 
@@ -104,8 +104,8 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 - **Sem registo público.** As contas são criadas por convite: quem gere o polo cria a conta com o e-mail, e a pessoa recebe um link para definir a palavra-passe. O link só funciona uma vez e expira em 48 h.
 - **Admin "hardcoded":** a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.
 - **2FA:** obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.
-- **Saída de pessoas:** as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa.
-- **Links de recuperação:** pode enviar um link de recuperação quem tiver a permissão de gerir membros num polo onde a pessoa tenha uma filiação ativa ou futura. O envio tem um limite e fica na auditoria de contas.
+- **Saída de pessoas:** as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa. Só entra no portal quem tem uma filiação ativa num polo ativo (o Admin é a exceção). Quem só tem uma filiação futura pode definir a palavra-passe pelo convite, mas só entra a partir da data de início.
+- **Links de recuperação:** pode enviar um link de recuperação quem tiver a permissão de gerir membros num polo onde a pessoa tenha uma filiação ativa ou futura. O envio tem um limite e fica na auditoria de contas. O "Esqueci-me da palavra-passe" público está preparado, mas fica desligado: por agora, os links só são enviados pelo secretariado ou pela coordenação.
 - **E-mail:** usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.
 
 ## 6. Módulo de salas

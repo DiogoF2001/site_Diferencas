@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Members" %} · {{ location }}{% endblock %}
+{% block content %}
+  <h1>{% translate "Members" %} · {{ location }}</h1>
+  <div class="toolbar">
+    <a class="btn btn-primary" href="{% url 'member_add' location.pk %}">{% translate "Add member" %}</a>
+    {% if can_list %}<a class="btn" href="{% url 'professional_list' location.pk %}">{% translate "Professionals list" %}</a>{% endif %}
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{% translate "Name" %}</th>
+          <th scope="col">{% translate "Roles in this location" %}</th>
+          <th scope="col">{% translate "Account" %}</th>
+          <th scope="col">{% translate "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <th scope="row">{{ row.user.full_name }}<br><span class="hint">{{ row.user.email }}</span></th>
+            <td>{% include "core/_memberships.html" with memberships=row.memberships %}</td>
+            <td>
+              {% if row.user.is_active %}<span class="badge badge-muted">{% translate "active" context "account" %}</span>{% else %}<span class="badge badge-off">{% translate "deactivated" context "account" %}</span>{% endif %}
+              {% if row.has_two_factor %}<span class="badge badge-loc">2FA</span>{% endif %}
+            </td>
+            <td>
+              <div class="actions">
+                {% if row.can_send_link %}
+                  <form method="post" action="{% url 'account_send_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Send password link" %}</button></form>
+                {% endif %}
+                {% if row.can_manage_account %}
+                  {% if row.has_two_factor %}
+                    <form method="post" action="{% url 'account_reset_two_factor' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Reset 2FA" %}</button></form>
+                  {% endif %}
+                  {% if row.user.is_active %}
+                    <form method="post" action="{% url 'account_deactivate' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small btn-danger" type="submit">{% translate "Deactivate account" %}</button></form>
+                  {% else %}
+                    <form method="post" action="{% url 'account_reactivate' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Reactivate account" %}</button></form>
+                  {% endif %}
+                {% endif %}
+                {% if row.can_remove %}
+                  <form method="post" action="{% url 'member_remove' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small btn-danger" type="submit">{% translate "Remove from location" %}</button></form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">{% translate "No members yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

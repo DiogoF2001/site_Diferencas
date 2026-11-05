@@ -27,6 +27,7 @@ COPY portal/ /app/
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gettext \
     && export DJANGO_SECRET_KEY=build-only DB_NAME=build DB_USER=build DB_PASSWORD=build \
+        EMAIL_HOST=build DEFAULT_FROM_EMAIL=build@localhost \
     && python manage.py compilemessages \
     && python manage.py collectstatic --noinput \
     && apt-get purge -y --auto-remove gettext \

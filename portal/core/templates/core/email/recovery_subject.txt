@@ -1,0 +1,1 @@
+{% load i18n %}{% translate "Set a new password on the Diferenças portal" %}

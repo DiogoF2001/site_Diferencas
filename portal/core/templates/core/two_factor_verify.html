@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Two-factor authentication" %}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Two-factor authentication" %}</h1>
+  <p class="lead">{% translate "Enter the 6-digit code from your authenticator app." %}</p>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "core/_form_fields.html" %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary" type="submit">{% translate "Continue" %}</button>
+  </form>
+  <p class="hint">{% translate "Lost your phone? Ask your location's coordination to reset two-factor authentication." %}</p>
+{% endblock %}

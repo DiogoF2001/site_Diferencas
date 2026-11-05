@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Add member" %} · {{ location }}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Add member" %} · {{ location }}</h1>
+  <p class="lead">{% translate "A new email address gets an account and an invitation to set the password. An address that already has an account only gets the new role here." %}</p>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "core/_form_fields.html" %}
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">{% translate "Add" %}</button>
+      <a class="btn" href="{% url 'member_list' location.pk %}">{% translate "Cancel" %}</a>
+    </div>
+  </form>
+{% endblock %}

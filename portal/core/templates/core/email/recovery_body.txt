@@ -1,0 +1,8 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with name=user.full_name %}Hello, {{ name }},{% endblocktranslate %}
+
+{% translate "A new password was requested for your account on the Diferenças portal. You can set it at this link:" %}
+
+{{ link }}
+
+{% blocktranslate %}The link works only once and expires after {{ hours }} hours. If you did not expect this email, you can ignore it: your current password still works.{% endblocktranslate %}
+{% endautoescape %}

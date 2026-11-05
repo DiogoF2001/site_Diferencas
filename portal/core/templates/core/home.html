@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Home" %}{% endblock %}
+{% block content %}
+  <h1>{% blocktranslate with name=user.full_name %}Hello, {{ name }}{% endblocktranslate %}</h1>
+  {% if not has_two_factor %}
+    <div class="alert alert-info">
+      <p>{% translate "Two-factor authentication protects your account if someone learns your password." %}</p>
+      <a class="btn btn-small" href="{% url 'two_factor_setup' %}">{% translate "Turn on two-factor authentication" %}</a>
+    </div>
+  {% endif %}
+  <div class="cards">
+    {% for row in rows %}
+      <section class="card">
+        <h2>{{ row.location }}{% if not row.location.is_active %} <span class="badge badge-off">{% translate "inactive" %}</span>{% endif %}</h2>
+        <div class="actions">
+          {% if row.manages %}<a class="btn btn-small" href="{% url 'member_list' row.location.pk %}">{% translate "Members" %}</a>{% endif %}
+          {% if row.lists %}<a class="btn btn-small" href="{% url 'professional_list' row.location.pk %}">{% translate "Professionals list" %}</a>{% endif %}
+        </div>
+      </section>
+    {% empty %}
+      <p>{% translate "You have no location yet." %}</p>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% load i18n %}<ul>
+  {% for membership in memberships %}
+    <li>{% if show_location %}<span class="badge badge-loc">{{ membership.location }}</span> {% endif %}{{ membership.get_role_display }}{% if membership.subrole %} ({{ membership.get_subrole_display }}){% endif %}
+      <span class="hint">{{ membership.start_date|date:"SHORT_DATE_FORMAT" }} – {% if membership.end_date %}{{ membership.end_date|date:"SHORT_DATE_FORMAT" }}{% else %}{% translate "no end date" %}{% endif %}</span></li>
+  {% endfor %}
+</ul>
