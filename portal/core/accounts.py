@@ -210,6 +210,79 @@ def remove_from_location(actor, target, location):
 
 
 @transaction.atomic
+def change_membership(request, actor, membership, *, role, subrole, start, end):
+    """Change the role or the dates of an active or future membership, up to the actor's level.
+
+    Returns (membership, sent): the membership now in force and the 2FA email action, as in
+    add_member. A new role for a membership that already started does not rewrite the past:
+    the old role ends yesterday and the new one starts today, with the end date asked for.
+    """
+    if not permissions.can_change_membership(actor, membership, role):
+        raise PermissionDenied
+    today = timezone.localdate()
+    if membership.end_date is not None and membership.end_date < today:
+        raise PermissionDenied
+    membership = Membership.objects.select_for_update().get(pk=membership.pk)
+    before = membership_snapshot(membership)
+    role_changed = (role, subrole) != (membership.role, membership.subrole)
+    started = membership.start_date < today
+    if role_changed and started:
+        membership.check_change(membership.start_date, end)
+        new = Membership(
+            user=membership.user,
+            location=membership.location,
+            role=role,
+            subrole=subrole,
+            start_date=today,
+            end_date=end,
+        )
+        membership.end_date = today - datetime.timedelta(days=1)
+        membership.full_clean()
+        membership.save(update_fields=["end_date"])
+        new.full_clean()
+        new.save()
+        details = {"before": before, "role_change": True}
+        record(
+            Action.MEMBERSHIP_ENDED,
+            actor=actor,
+            target=membership.user,
+            location=membership.location,
+            after=membership_snapshot(membership),
+            **details,
+        )
+        record(
+            Action.MEMBERSHIP_CREATED,
+            actor=actor,
+            target=new.user,
+            location=new.location,
+            after=membership_snapshot(new),
+            role_change=True,
+        )
+        membership = new
+    else:
+        membership.check_change(start, end)
+        membership.role, membership.subrole = role, subrole
+        membership.start_date, membership.end_date = start, end
+        membership.full_clean()
+        membership.save()
+        after = membership_snapshot(membership)
+        if after == before:
+            return membership, None
+        record(
+            Action.MEMBERSHIP_CHANGED,
+            actor=actor,
+            target=membership.user,
+            location=membership.location,
+            before=before,
+            after=after,
+        )
+    sent = None
+    if before["role"] != membership.role:
+        sent = offer_two_factor_link(request, membership, actor=actor)
+    return membership, sent
+
+
+@transaction.atomic
 def set_account_active(actor, target, active):
     """Deactivate or reactivate the whole account. Accounts are never deleted (plan, section 5)."""
     if not permissions.can_manage_account(actor, target):
@@ -244,17 +317,33 @@ def reset_two_factor_from_server(target):
 
 
 def send_recovery_link(request, actor, target, location):
-    """The members page's "Send link": the 2FA link to someone with a password who still has to
-    set 2FA up for a staff role, otherwise the invitation or recovery link.
+    """The members page's "Send password link": the invitation or the recovery link.
+
+    Someone who still has to set 2FA up for a staff role sets it up in the same flow, so this
+    also helps whoever forgot the password they need for the 2FA link.
+    """
+    if not permissions.can_send_recovery_link(actor, target, location):
+        raise PermissionDenied
+    with transaction.atomic():
+        send_password_link(request, target, actor=actor, location=location)
+
+
+class NothingToSend(Exception):
+    pass
+
+
+def resend_two_factor_link(request, actor, target, location):
+    """The members page's "Send 2FA link", for someone with a password and 2FA still to set up.
+
+    Raises NothingToSend once that is no longer the case (2FA done, role gone, no password).
     """
     if not permissions.can_send_recovery_link(actor, target, location):
         raise PermissionDenied
     with transaction.atomic():
         membership = _two_factor_membership(target, location)
-        if membership is not None:
-            send_two_factor_link(request, membership, actor=actor)
-        else:
-            send_password_link(request, target, actor=actor, location=location)
+        if membership is None:
+            raise NothingToSend
+        send_two_factor_link(request, membership, actor=actor)
 
 
 def _two_factor_membership(target, location):

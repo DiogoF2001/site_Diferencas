@@ -6,6 +6,8 @@
   <div class="toolbar">
     <a class="btn btn-primary" href="{% url 'member_add' location.pk %}">{% translate "Add member" %}</a>
     {% if can_list %}<a class="btn" href="{% url 'professional_list' location.pk %}">{% translate "Professionals list" %}</a>{% endif %}
+    {% if can_mentor %}<a class="btn" href="{% url 'mentorship_list' location.pk %}">{% translate "Mentorships" %}</a>{% endif %}
+    {% if can_audit %}<a class="btn" href="{% url 'audit_list' location.pk %}">{% translate "Account audit" %}</a>{% endif %}
   </div>
   <div class="table-wrap">
     <table>
@@ -21,7 +23,7 @@
         {% for row in rows %}
           <tr>
             <th scope="row">{{ row.user.full_name }}<br><span class="hint">{{ row.user.email }}</span></th>
-            <td>{% include "core/_memberships.html" with memberships=row.memberships %}</td>
+            <td>{% include "core/_memberships.html" with memberships=row.memberships editable=row.editable %}</td>
             <td>
               {% if row.user.is_active %}<span class="badge badge-muted">{% translate "active" context "account" %}</span>{% else %}<span class="badge badge-off">{% translate "deactivated" context "account" %}</span>{% endif %}
               {% if row.has_two_factor %}<span class="badge badge-loc">2FA</span>{% endif %}
@@ -29,7 +31,10 @@
             <td>
               <div class="actions">
                 {% if row.can_send_link %}
-                  <form method="post" action="{% url 'account_send_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% if row.sends_two_factor_link %}{% translate "Send 2FA link" %}{% else %}{% translate "Send password link" %}{% endif %}</button></form>
+                  {% if row.sends_two_factor_link %}
+                    <form method="post" action="{% url 'account_send_two_factor_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Send 2FA link" %}</button></form>
+                  {% endif %}
+                  <form method="post" action="{% url 'account_send_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Send password link" %}</button></form>
                 {% endif %}
                 {% if row.can_manage_account %}
                   {% if row.has_two_factor %}

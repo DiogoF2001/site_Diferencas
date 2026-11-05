@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core import accounts, permissions
-from core.forms import MemberForm
+from core.forms import MemberForm, MembershipForm
 from core.models import AuditEvent, Location, Membership
 
 
@@ -55,6 +55,11 @@ def member_list(request, location_id):
             "can_remove": permissions.can_remove_from_location(actor, user, location),
             "can_manage_account": permissions.can_manage_account(actor, user),
             "can_send_link": permissions.can_send_recovery_link(actor, user, location),
+            "editable": [
+                membership.pk
+                for membership in memberships
+                if permissions.can_change_membership(actor, membership)
+            ],
             "sends_two_factor_link": accounts.needs_two_factor_link(user),
         }
         for user, memberships in people.items()
@@ -63,6 +68,8 @@ def member_list(request, location_id):
         "location": location,
         "rows": rows,
         "can_list": permissions.has_perm_in(actor, "core.view_professionals", location),
+        "can_mentor": permissions.has_perm_in(actor, permissions.MANAGE_MENTORSHIPS, location),
+        "can_audit": permissions.has_perm_in(actor, permissions.VIEW_AUDIT, location),
     }
     return render(request, "core/member_list.html", context)
 
@@ -127,9 +134,8 @@ def member_add(request, location_id):
     return render(request, "core/member_add.html", {"location": location, "form": form})
 
 
-def _add_errors(form, error):
+def _add_errors(form, error, fields=frozenset(MemberForm.base_fields)):
     """Model errors on the form, under the matching field when there is one."""
-    fields = {"start_date", "end_date", "role", "subrole", "email", "full_name"}
     if hasattr(error, "error_dict"):
         for field, errors in error.error_dict.items():
             for item in errors:
@@ -199,15 +205,69 @@ def account_reset_two_factor(request, location_id, user_id):
 def account_send_link(request, location_id, user_id):
     location = _location_with_perm(request, location_id, permissions.MANAGE_MEMBERS)
     target = _member(location, user_id)
+    _send_link(request, target, accounts.send_recovery_link, location)
+    return redirect("member_list", location.pk)
+
+
+@require_POST
+@login_required
+def account_send_two_factor_link(request, location_id, user_id):
+    location = _location_with_perm(request, location_id, permissions.MANAGE_MEMBERS)
+    target = _member(location, user_id)
+    _send_link(request, target, accounts.resend_two_factor_link, location)
+    return redirect("member_list", location.pk)
+
+
+def _send_link(request, target, send, location):
     try:
-        accounts.send_recovery_link(request, request.user, target, location)
+        send(request, request.user, target, location)
+    except accounts.NothingToSend:
+        messages.error(request, _("This person no longer has two-factor authentication to set up."))
     except accounts.EmailLimitReached:
         messages.error(request, _("Too many emails to this address in the last hour."))
     except OSError:
         messages.error(request, _("The email could not be sent. Please try again."))
     else:
         messages.success(request, _("A link was sent to %(email)s.") % {"email": target.email})
-    return redirect("member_list", location.pk)
+
+
+@login_required
+def membership_edit(request, location_id, membership_id):
+    location = _location_with_perm(request, location_id, permissions.MANAGE_MEMBERS)
+    membership = get_object_or_404(_current_memberships(location), pk=membership_id)
+    if not permissions.can_change_membership(request.user, membership):
+        raise PermissionDenied
+    roles = permissions.assignable_roles(request.user, location)
+    form = MembershipForm(request.POST or None, membership=membership, roles=roles)
+    if form.is_valid():
+        data = form.cleaned_data
+        try:
+            _membership, sent = accounts.change_membership(
+                request,
+                request.user,
+                membership,
+                role=data["role"],
+                subrole=data["subrole"],
+                start=data["start_date"],
+                end=data["end_date"],
+            )
+        except ValidationError as error:
+            _add_errors(form, error, fields=set(form.fields))
+        else:
+            messages.success(request, _("The membership was changed."))
+            if sent == AuditEvent.Action.TWO_FACTOR_LINK_FAILED:
+                messages.warning(request, accounts.LINK_FAILED_MESSAGE)
+            elif sent:
+                messages.success(
+                    request,
+                    _(
+                        "As the role requires two-factor authentication, the link to set it up "
+                        "was sent."
+                    ),
+                )
+            return redirect("member_list", location.pk)
+    context = {"location": location, "membership": membership, "form": form}
+    return render(request, "core/membership_edit.html", context)
 
 
 @login_required

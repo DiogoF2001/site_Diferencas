@@ -4,6 +4,7 @@ import re
 import smtplib
 
 import pytest
+from django.core.exceptions import PermissionDenied
 from django.test import Client, RequestFactory
 from django.urls import reverse
 from django.utils import timezone
@@ -208,7 +209,7 @@ def test_send_link_button_sends_the_2fa_link_after_a_failure(
         fail_smtp(patch)
         add(client, location, person.email)
 
-    client.post(reverse("account_send_link", args=[location.pk, person.pk]))
+    client.post(reverse("account_send_two_factor_link", args=[location.pk, person.pk]))
 
     assert len(mailoutbox) == 1
     assert "/conta/2fa/link/" in mailoutbox[0].body
@@ -228,6 +229,84 @@ def test_send_link_button_sends_a_password_link_when_no_2fa_is_due(
     assert "/conta/definir/" in mailoutbox[0].body
 
 
+def test_pending_2fa_shows_both_link_buttons(client, location, coordination):
+    person = person_with_password(location)
+    staff_role(person, location, start=3)
+
+    page = client.get(reverse("member_list", args=[location.pk])).content.decode()
+
+    assert "Enviar link do 2FA" in page
+    assert "Enviar link da palavra-passe" in page
+    assert reverse("account_send_two_factor_link", args=[location.pk, person.pk]) in page
+    assert reverse("account_send_link", args=[location.pk, person.pk]) in page
+
+
+def test_password_button_with_pending_2fa_sends_a_recovery_link_that_sets_up_2fa(
+    client, location, coordination, mailoutbox
+):
+    """Whoever also forgot the password is not stuck: recovery ends in the 2FA step."""
+    person = person_with_password(location)
+    staff_role(person, location, start=3)
+
+    client.post(reverse("account_send_link", args=[location.pk, person.pk]))
+
+    assert len(mailoutbox) == 1
+    assert "/conta/definir/" in mailoutbox[0].body
+    assert AuditEvent.objects.filter(action=Action.RECOVERY_LINK_SENT, target=person).exists()
+    path = re.search(r"https?://\S+(/conta/definir/\S+/)", mailoutbox[0].body).group(1)
+    visitor = Client()
+    form = visitor.get(path, follow=True)
+    new_password = "outra-palavra-passe-longa"
+    response = visitor.post(
+        form.redirect_chain[-1][0],
+        {"new_password1": new_password, "new_password2": new_password},
+    )
+    assert response.url == reverse("two_factor_enrol")
+
+
+def test_2fa_button_once_nothing_is_pending_sends_nothing(
+    client, location, coordination, mailoutbox
+):
+    person = person_with_password(location)
+
+    response = client.post(
+        reverse("account_send_two_factor_link", args=[location.pk, person.pk]), follow=True
+    )
+
+    assert mailoutbox == []
+    assert "já não tem a autenticação de dois fatores por configurar" in response.content.decode()
+
+
+def test_professional_cannot_send_the_2fa_link(client, location, mailoutbox):
+    person = person_with_password(location)
+    staff_role(person, location, start=3)
+    professional = make_account("profissional")
+    make_member(professional, location, Role.PROFESSIONAL)
+    login_verified(client, professional)
+
+    response = client.post(reverse("account_send_two_factor_link", args=[location.pk, person.pk]))
+
+    assert response.status_code == 403
+    assert mailoutbox == []
+
+
+def test_resending_the_2fa_link_checks_the_permission_without_the_view(
+    location, other_location, mailoutbox
+):
+    person = person_with_password(location)
+    staff_role(person, location, start=3)
+    professional = make_account("profissional")
+    make_member(professional, location, Role.PROFESSIONAL)
+    other = make_account("secretariado-b")
+    make_member(other, other_location, Role.SECRETARIAT)
+
+    with pytest.raises(PermissionDenied):
+        accounts.resend_two_factor_link(_request(), professional, person, location)
+    with pytest.raises(PermissionDenied):
+        accounts.resend_two_factor_link(_request(), other, person, other_location)
+    assert mailoutbox == []
+
+
 def test_secretariat_of_another_location_cannot_send_the_2fa_link(
     client, location, other_location, monkeypatch, mailoutbox
 ):
@@ -237,9 +316,9 @@ def test_secretariat_of_another_location_cannot_send_the_2fa_link(
     make_member(other, other_location, Role.SECRETARIAT)
     login_verified(client, other)
 
-    response = client.post(reverse("account_send_link", args=[other_location.pk, person.pk]))
-
-    assert response.status_code == 404
+    for name in ("account_send_link", "account_send_two_factor_link"):
+        response = client.post(reverse(name, args=[other_location.pk, person.pk]))
+        assert response.status_code == 404
     assert mailoutbox == []
 
 

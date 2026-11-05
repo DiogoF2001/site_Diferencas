@@ -92,3 +92,7 @@ td ul { margin: 0; padding-left: 1.1rem; }
 .toolbar { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; margin-bottom: .75rem; }
 .qr svg { display: block; width: 200px; height: 200px; background: #fff; }
 .secret { font-family: monospace; font-size: 1.05rem; word-break: break-all; }
+.changes { display: grid; grid-template-columns: auto 1fr; gap: 0 .5rem; margin: 0; }
+.changes dt { font-weight: 700; }
+.changes dd { margin: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

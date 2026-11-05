@@ -6,7 +6,7 @@ from django_otp import user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core import accounts
-from core.audit import Action, membership_snapshot, record
+from core.audit import Action, membership_snapshot, mentorship_snapshot, record
 from core.models import AuditEvent, Location, Membership, Mentorship, User
 
 # Access comes from memberships in a location, never from Django groups.
@@ -108,6 +108,30 @@ class MentorshipAdmin(admin.ModelAdmin):
     list_filter = ["location"]
     search_fields = ["mentor__email", "mentee__email"]
     autocomplete_fields = ["mentor", "mentee"]
+
+    def save_model(self, request, obj, form, change):
+        before = mentorship_snapshot(Mentorship.objects.get(pk=obj.pk)) if change else None
+        super().save_model(request, obj, form, change)
+        action = Action.MENTORSHIP_CHANGED if change else Action.MENTORSHIP_CREATED
+        details = {"after": mentorship_snapshot(obj)}
+        if before:
+            details["before"] = before
+        record(action, actor=request.user, target=obj.mentee, location=obj.location, **details)
+
+    def delete_model(self, request, obj):
+        before = mentorship_snapshot(obj)
+        super().delete_model(request, obj)
+        record(
+            Action.MENTORSHIP_DELETED,
+            actor=request.user,
+            target=obj.mentee,
+            location=obj.location,
+            before=before,
+        )
+
+    def delete_queryset(self, request, queryset):
+        for mentorship in queryset:
+            self.delete_model(request, mentorship)
 
 
 @admin.register(AuditEvent)

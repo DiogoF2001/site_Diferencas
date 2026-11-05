@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core.audit import Action, is_login_locked, normalise_email, record
-from core.models import Role, Subrole, User
+from core.models import AuditEvent, Role, Subrole, User
 from core.permissions import may_log_in_without_two_factor
 
 
@@ -153,3 +153,83 @@ class TokenForm(forms.Form):
         if not token.isdigit():
             raise forms.ValidationError(_("The code has 6 digits."))
         return token
+
+
+def _date_field(label, **kwargs):
+    return forms.DateField(label=label, widget=forms.DateInput(attrs={"type": "date"}), **kwargs)
+
+
+class MembershipForm(forms.Form):
+    """Role and dates of an existing membership. A start date that has passed stays as it was."""
+
+    role = forms.ChoiceField(label=_("Role"))
+    subrole = MemberForm.base_fields["subrole"]
+    start_date = _date_field(_("Start date"))
+    end_date = _date_field(
+        _("End date"),
+        required=False,
+        help_text=MemberForm.base_fields["end_date"].help_text,
+    )
+
+    def __init__(self, *args, membership, roles, **kwargs):
+        initial = {
+            "role": membership.role,
+            "subrole": membership.subrole,
+            "start_date": membership.start_date,
+            "end_date": membership.end_date,
+        }
+        super().__init__(*args, initial=initial, **kwargs)
+        self.fields["role"].choices = [(role.value, role.label) for role in roles]
+        if membership.start_date < timezone.localdate():
+            self.fields["start_date"].disabled = True
+            self.fields["start_date"].help_text = _(
+                "It has passed. A new role counts from today, and the old one stays in the "
+                "history until yesterday."
+            )
+
+    def clean(self):
+        data = super().clean()
+        if data.get("role") != Role.PROFESSIONAL:
+            data["subrole"] = ""
+        return data
+
+
+class PersonChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.full_name} ({obj.email})"
+
+
+class MentorshipForm(forms.Form):
+    mentor = PersonChoiceField(label=_("Mentor"), queryset=User.objects.none())
+    mentee = PersonChoiceField(label=_("Mentee"), queryset=User.objects.none())
+    start_date = _date_field(_("Start date"))
+    end_date = _date_field(_("End date"), required=False)
+
+    def __init__(self, *args, mentors, mentees, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["mentor"].queryset = mentors
+        self.fields["mentee"].queryset = mentees
+        self.fields["start_date"].initial = timezone.localdate()
+
+
+class MentorshipDatesForm(forms.Form):
+    start_date = _date_field(_("Start date"))
+    end_date = _date_field(_("End date"), required=False)
+
+    def __init__(self, *args, mentorship, **kwargs):
+        initial = {"start_date": mentorship.start_date, "end_date": mentorship.end_date}
+        super().__init__(*args, initial=initial, **kwargs)
+        if mentorship.start_date < timezone.localdate():
+            self.fields["start_date"].disabled = True
+            self.fields["start_date"].help_text = _("It has passed and can no longer change.")
+
+
+class AuditFilterForm(forms.Form):
+    person = PersonChoiceField(label=_("Person"), queryset=User.objects.none(), required=False)
+    action = forms.ChoiceField(label=_("Action"), required=False)
+
+    def __init__(self, *args, people, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["person"].queryset = people
+        self.fields["person"].empty_label = _("All")
+        self.fields["action"].choices = [("", _("All")), *AuditEvent.Action.choices]

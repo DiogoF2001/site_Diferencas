@@ -22,6 +22,8 @@ ROLE_LEVELS = {Role.PROFESSIONAL: 1, Role.SECRETARIAT: 2, Role.COORDINATION: 3}
 TWO_FACTOR_ROLES = frozenset({Role.SECRETARIAT, Role.COORDINATION})
 
 MANAGE_MEMBERS = "core.manage_members"
+MANAGE_MENTORSHIPS = "core.manage_mentorships"
+VIEW_AUDIT = "core.view_audit"
 
 
 class AdminAccess(enum.Enum):
@@ -139,6 +141,12 @@ def can_assign_role(actor, role, location):
     if is_admin(actor):
         return True
     return has_perm_in(actor, MANAGE_MEMBERS, location) and level <= role_level_in(actor, location)
+
+
+def can_change_membership(actor, membership, role=None):
+    """Changing a membership needs the actor's level for its current role and for the new one."""
+    roles = {membership.role, role or membership.role}
+    return all(can_assign_role(actor, item, membership.location) for item in roles)
 
 
 def assignable_roles(actor, location):

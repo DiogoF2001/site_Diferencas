@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Portal Diferenças\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 22:22+0000\n"
+"POT-Creation-Date: 2026-11-05 22:34+0000\n"
 "Language: pt_PT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -76,6 +76,31 @@ msgstr "Código"
 
 msgid "The code has 6 digits."
 msgstr "O código tem 6 algarismos."
+
+msgid ""
+"It has passed. A new role counts from today, and the old one stays in the "
+"history until yesterday."
+msgstr ""
+"Já passou. Um papel novo conta a partir de hoje, e o anterior fica no "
+"histórico até ontem."
+
+msgid "Mentor"
+msgstr "Orientadora"
+
+msgid "Mentee"
+msgstr "Orientanda"
+
+msgid "It has passed and can no longer change."
+msgstr "Já passou e não pode ser alterada."
+
+msgid "Person"
+msgstr "Pessoa"
+
+msgid "Action"
+msgstr "Ação"
+
+msgid "All"
+msgstr "Todas"
 
 msgid "Creates the admin account from the environment. Safe to run repeatedly."
 msgstr ""
@@ -152,6 +177,15 @@ msgstr "data de início"
 
 msgid "end date"
 msgstr "data de fim"
+
+msgid "The start date cannot change once it has passed."
+msgstr "A data de início não pode ser alterada depois de passar."
+
+msgid "The start date cannot be in the past."
+msgstr "A data de início não pode ser no passado."
+
+msgid "The end date cannot be before yesterday."
+msgstr "A data de fim não pode ser anterior a ontem."
 
 msgid "Professional"
 msgstr "Profissional"
@@ -246,6 +280,18 @@ msgstr "Filiação terminada"
 msgid "Membership deleted"
 msgstr "Filiação apagada"
 
+msgid "Mentorship created"
+msgstr "Orientação criada"
+
+msgid "Mentorship changed"
+msgstr "Orientação alterada"
+
+msgid "Mentorship ended"
+msgstr "Orientação terminada"
+
+msgid "Mentorship deleted"
+msgstr "Orientação apagada"
+
 msgid "Account deactivated"
 msgstr "Conta desativada"
 
@@ -297,8 +343,70 @@ msgstr "evento da auditoria de contas"
 msgid "account audit events"
 msgstr "eventos da auditoria de contas"
 
+msgid "Before"
+msgstr "Antes"
+
+msgid "After"
+msgstr "Depois"
+
+msgid "Role change"
+msgstr "Mudança de papel"
+
+msgid "Hourly limit reached"
+msgstr "Limite por hora atingido"
+
+msgid "Email server error"
+msgstr "Erro do servidor de e-mail"
+
 msgid "no end date"
 msgstr "sem data de fim"
+
+msgid "Change"
+msgstr "Alterar"
+
+msgid "Account audit"
+msgstr "Auditoria de contas"
+
+msgid ""
+"What happened in this location, and to the accounts of its current and "
+"future members. What a person does in other locations is not shown."
+msgstr ""
+"O que aconteceu neste polo e nas contas dos seus membros atuais e futuros. "
+"O que uma pessoa faz noutros polos não aparece."
+
+msgid "Filter"
+msgstr "Filtrar"
+
+msgid "Date and time"
+msgstr "Data e hora"
+
+msgid "Account"
+msgstr "Conta"
+
+msgid "Done by"
+msgstr "Feito por"
+
+msgid "Details"
+msgstr "Detalhes"
+
+msgid "whole account"
+msgstr "conta inteira"
+
+msgid "No events."
+msgstr "Sem eventos."
+
+msgid "Pages"
+msgstr "Páginas"
+
+msgid "Newer"
+msgstr "Mais recentes"
+
+#, python-format
+msgid "Page %(number)s of %(total)s"
+msgstr "Página %(number)s de %(total)s"
+
+msgid "Older"
+msgstr "Mais antigos"
 
 msgid "Diferenças portal"
 msgstr "Portal Diferenças"
@@ -426,6 +534,9 @@ msgstr "Membros"
 msgid "Professionals list"
 msgstr "Listagem de profissionais"
 
+msgid "Mentorships"
+msgstr "Orientações"
+
 msgid "You have no location yet."
 msgstr "Ainda não tem nenhum polo."
 
@@ -461,9 +572,6 @@ msgstr "Nome"
 msgid "Roles in this location"
 msgstr "Papéis neste polo"
 
-msgid "Account"
-msgstr "Conta"
-
 msgid "Actions"
 msgstr "Ações"
 
@@ -495,6 +603,44 @@ msgstr "Remover do polo"
 
 msgid "No members yet."
 msgstr "Ainda não há membros."
+
+msgid "Change membership"
+msgstr "Alterar filiação"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Change mentorship"
+msgstr "Alterar orientação"
+
+msgid "Add mentorship"
+msgstr "Adicionar orientação"
+
+msgid ""
+"The mentor is a professional of this location, and the mentee an intern of "
+"this location, on the dates of the mentorship."
+msgstr ""
+"A orientadora tem de ser Profissional neste polo e a orientanda Estagiária "
+"neste polo, nas datas da orientação."
+
+msgid ""
+"A mentor sees the schedule and hours of their mentees in this location, "
+"while the mentorship lasts."
+msgstr ""
+"A orientadora vê o horário e as horas das suas orientandas neste polo, "
+"enquanto a orientação durar."
+
+msgid "Dates"
+msgstr "Datas"
+
+msgid "Change dates"
+msgstr "Alterar datas"
+
+msgid "End mentorship"
+msgstr "Terminar orientação"
+
+msgid "No mentorships yet."
+msgstr "Ainda não há orientações."
 
 msgid "Save password"
 msgstr "Guardar a palavra-passe"
@@ -655,9 +801,31 @@ msgstr ""
 "A autenticação de dois fatores de %(name)s foi reposta. Se o papel o exigir, "
 "precisa de um novo link para a configurar de novo."
 
+msgid "This person no longer has two-factor authentication to set up."
+msgstr "Esta pessoa já não tem a autenticação de dois fatores por configurar."
+
 #, python-format
 msgid "A link was sent to %(email)s."
 msgstr "Foi enviado um link para %(email)s."
+
+msgid "The membership was changed."
+msgstr "A filiação foi alterada."
+
+msgid ""
+"As the role requires two-factor authentication, the link to set it up was "
+"sent."
+msgstr ""
+"Como o papel exige autenticação de dois fatores, o link para a configurar "
+"foi enviado."
+
+msgid "The mentorship was added."
+msgstr "A orientação foi adicionada."
+
+msgid "The mentorship was changed."
+msgstr "A orientação foi alterada."
+
+msgid "The mentorship was ended."
+msgstr "A orientação foi terminada."
 
 msgid "The code is not valid. Check the time on your phone."
 msgstr "O código não é válido. Confirme a hora do telemóvel."
