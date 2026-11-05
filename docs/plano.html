@@ -119,7 +119,7 @@
     <div class="cartao"><h4>Monólito modular</h4><p>Contas, papéis e permissões formam um núcleo comum. Cada serviço (Salas agora, outros no futuro) é um módulo que se liga a esse núcleo.</p></div>
     <div class="cartao"><h4>Django + PostgreSQL</h4><p>Começa no Django 5.2 LTS e migra para a 6.2 LTS em 2027. A interface usa HTMX e o EventCalendar (MIT).</p></div>
     <div class="cartao"><h4>Tudo em Docker</h4><p>Usa Docker Compose, por isso pode correr num VPS, na cloud ou no centro. O sítio do alojamento decide-se mais tarde.</p></div>
-    <div class="cartao"><h4>Papéis por polo</h4><p>Cada pessoa tem uma só conta. Os papéis vêm de filiações (pessoa + polo + papel), e uma pessoa pode ter papéis diferentes em polos diferentes.</p></div>
+    <div class="cartao"><h4>Papéis por polo</h4><p>Cada pessoa tem uma só conta (a conta técnica do Admin é a exceção). Os papéis vêm de filiações (pessoa + polo + papel), e uma pessoa pode ter papéis diferentes em polos diferentes.</p></div>
     <div class="cartao"><h4>Sem serviços pagos</h4><p>Não depende de Google nem de Microsoft. A única dependência externa é um servidor SMTP para os e-mails.</p></div>
   </div>
 </section>
@@ -164,7 +164,7 @@
     <li><strong>Profissional</strong>, com dois subpapéis: <strong>Residente</strong> e <strong>Estagiária</strong>. Têm as mesmas permissões no módulo de Salas; a separação existe para serviços futuros.</li>
     <li><strong>Secretariado:</strong> gere a operação diária do polo.</li>
     <li><strong>Coordenação / Direção técnica:</strong> tem acesso total ao polo e também aos relatórios.</li>
-    <li><strong>Admin</strong> (global, criado na instalação): tem tudo, incluindo a área técnica.</li>
+    <li><strong>Admin</strong> (global, criado na instalação): tem tudo, incluindo a área técnica. É uma conta técnica, sem filiações, sem horário e sem horas próprias. Quem também trabalhe como profissional usa outra conta, com outro e-mail.</li>
   </ul>
 
   <h3>Permissões (dentro do polo)</h3>
@@ -172,8 +172,8 @@
     <tr><th>Permissão</th><th>Profissional<br><small>Residente / Estagiária</small></th><th>Secretariado</th><th>Coordenação</th><th>Admin</th></tr>
     <tr><td>Ver ocupação (livre/ocupado)</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
     <tr><td>Ver detalhes e histórico de todas as reservas</td><td class="c">só as suas*</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
-    <tr><td>Submeter pedidos de reserva</td><td class="c ok">✓</td><td class="c">marca diretamente</td><td class="c">marca diretamente</td><td class="c ok">✓</td></tr>
-    <tr><td>Adicionar participantes às suas reservas</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Submeter pedidos de reserva</td><td class="c ok">✓</td><td class="c">marca diretamente</td><td class="c">marca diretamente</td><td class="c">em nome de outra pessoa</td></tr>
+    <tr><td>Adicionar participantes às suas reservas</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c">em nome de outra pessoa</td></tr>
     <tr><td>Aprovar e recusar pedidos; alterar qualquer reserva</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
     <tr><td>Gerir salas, salas exclusivas, bloqueios e regras do polo</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
     <tr><td>Anular bloqueios automáticos (feriados)</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
@@ -205,7 +205,7 @@
     <li><strong>Sem registo público.</strong> As contas são criadas por convite: quem gere o polo cria a conta com o e-mail, e a pessoa recebe um link para definir a palavra-passe. O link só funciona uma vez e expira em 48 h.</li>
     <li><strong>Admin "hardcoded":</strong> a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.</li>
     <li><strong>2FA:</strong> obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.</li>
-    <li><strong>Saída de pessoas:</strong> as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho nesse dia.</li>
+    <li><strong>Saída de pessoas:</strong> as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa.</li>
     <li><strong>E-mail:</strong> usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.</li>
   </ul>
 </section>
@@ -218,6 +218,7 @@
     <li><strong>Libertação de períodos:</strong> fica prevista no modelo de dados, como uma exceção à atribuição, mas <em>desligada</em>. O admin pode ativá-la por polo.</li>
     <li><strong>Reservas duplicadas impossíveis:</strong> uma restrição do PostgreSQL impede reservas aprovadas sobrepostas na mesma sala. Isto inclui as atribuições exclusivas e os bloqueios, e vale mesmo que duas pessoas aprovem ao mesmo tempo.</li>
     <li><strong>"Livre/ocupado" filtrado no servidor:</strong> das reservas de outras pessoas, o servidor só envia início, fim e "ocupado". Esconder os detalhes só na interface não chegaria.</li>
+    <li><strong>O que conta como "Ocupado":</strong> só as reservas aprovadas, as atribuições exclusivas e os bloqueios. Os pedidos pendentes de outras pessoas não aparecem a quem é Profissional.</li>
     <li><strong>Sem dados de utentes:</strong> as notas das reservas são só para notas logísticas. Isto mantém o serviço fora do regime de dados de saúde.</li>
   </ul>
 </section>
@@ -345,7 +346,7 @@
     <li><strong>db:</strong> PostgreSQL;</li>
     <li><strong>backup:</strong> cópia diária encriptada da base de dados, guardada fora do servidor, com teste de reposição todos os meses.</li>
   </ul>
-  <p>Há também um serviço pontual, <strong>migrate</strong>, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação.</p>
+  <p>Há também um serviço pontual, <strong>migrate</strong>, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas, que não é superutilizador; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação. O backup usa um utilizador só de leitura, e o superutilizador do PostgreSQL serve só para a inicialização.</p>
   <p>Os segredos (incluindo os do admin) ficam num ficheiro de ambiente fora do repositório.</p>
   <h3>Opções (decisão adiada)</h3>
   <div class="tabela"><table>

@@ -50,7 +50,7 @@ deploy/      Docker Compose, Caddyfile, scripts de backup
 | Polo | `Location` |
 | Filiação (pessoa + polo + papel) | `Membership` |
 | Papel / subpapel | `Role` (`professional`, `secretariat`, `coordination`) / `Subrole` (`resident`, `intern`) |
-| Admin (global) | `is_superuser` + papel técnico global |
+| Admin (global) | `is_superuser`, conta técnica sem `Membership` |
 | Orientação (orientadora → orientanda) | `Mentorship` (`mentor`, `mentee`) |
 | Sala | `Room` |
 | Atribuição exclusiva | `RoomAssignment` |
@@ -96,6 +96,14 @@ docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app ruff form
 docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py makemigrations
 docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py migrate
 
+# Admin em desenvolvimento (valores fictícios do docker-compose.dev.yml)
+docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py ensure_admin
+
+# Traduções: extrair para o .po, preencher os msgstr em português e compilar.
+# Os testes compilam sozinhos; o runserver precisa deste último comando para mostrar as traduções.
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app python manage.py makemessages -l pt_PT --no-location
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app python manage.py compilemessages
+
 # Auditoria de dependências
 docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app pip-audit --require-hashes --disable-pip -r requirements/base.txt -r requirements/dev.txt
 
@@ -107,10 +115,20 @@ docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps -w /app/requi
 docker compose -f deploy/docker-compose.yml run --rm --no-deps app python manage.py check --deploy --fail-level WARNING
 docker compose -f deploy/docker-compose.yml up -d --build --wait
 docker compose -f deploy/docker-compose.yml --profile ops run --rm migrate
+docker compose -f deploy/docker-compose.yml --profile ops run --rm create-admin
 docker compose -f deploy/docker-compose.yml exec backup /usr/local/bin/backup.sh once
+
+# Verificação em contentores reais: utilizadores da base de dados, backup, traduções, WhiteNoise e
+# login no backoffice. Não precisa de .env e usa uma pilha própria, que apaga no fim.
+deploy/tests/check-production.sh
 ```
 
 - Usa sempre `--fail-level WARNING` no `check --deploy`. Sem esta opção, os avisos não fazem o comando falhar.
-- As migrações em produção correm só pelo serviço `migrate`, com o utilizador dono das tabelas. A `app` e o `worker` usam `PORTAL_DB_USER`, que não é dono de nenhuma tabela.
-- O comando para criar o admin chega na tarefa 2.
+- O PostgreSQL de produção tem quatro utilizadores:
+  - `POSTGRES_USER` é o superutilizador e serve só para a inicialização, no `init-roles.sh`. Nenhum outro serviço o recebe;
+  - `PORTAL_OWNER_USER` é o dono das tabelas, não é superutilizador e é usado só pelo `migrate`;
+  - `PORTAL_DB_USER` é usado pela `app`, pelo `worker` e pelo `create-admin`, e não é dono de nenhuma tabela;
+  - `PORTAL_BACKUP_USER` é usado pelo `backup` e só tem `pg_read_all_data`.
+- O `init-roles.sh` só corre num volume novo. Mudar estes utilizadores numa base de dados existente exige fazer as alterações à mão.
+- O `ensure_admin` só usa a palavra-passe do ambiente ao criar a conta. Para a repor numa emergência, usa o `changepassword` do Django.
 - O Dependabot não atualiza a imagem do Postgres em `.github/workflows/ci.yml`. A CI falha até essa linha ser atualizada à mão para a mesma versão.

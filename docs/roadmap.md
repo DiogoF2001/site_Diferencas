@@ -18,10 +18,11 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [x] Secção "Comandos" do `CLAUDE.md` e um README com o arranque local.
 
 ## 2. Núcleo: utilizadores, polos e filiações
-- [ ] Utilizador personalizado com login por e-mail (único).
-- [ ] `Location`, `Membership` (papel, subpapel, início, fim; vários papéis por polo), `Mentorship`.
-- [ ] Management command para criar o admin a partir do `.env` (idempotente).
-- [ ] Backoffice Django só para o admin.
+- [x] Utilizador personalizado com login por e-mail (único).
+- [x] `Location`, `Membership` (papel, subpapel, início, fim; vários papéis por polo), `Mentorship`.
+- [x] Management command para criar o admin a partir do `.env` (idempotente).
+- [x] Backoffice Django só para o admin.
+- [x] Utilizadores da base de dados separados (dono sem superutilizador, app, backup só de leitura), `compilemessages` na imagem e WhiteNoise testado, em `deploy/tests/check-production.sh`.
 
 ## 3. Motor de permissões
 - [ ] Registo de permissões por módulo, mais o mapeamento papel → permissões.
@@ -36,7 +37,7 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [ ] Desativação de contas (nunca apagar). O fim da filiação de estagiária retira o acesso automaticamente.
 - [ ] Gestão de membros do polo (criar, adicionar uma conta existente ao polo, remover do polo).
 - [ ] Listagem da coordenação: profissionais do polo com os papéis no polo e, opcionalmente, noutros polos (sem atividade). Exportação em CSV.
-- [ ] `AuditEvent` em todas estas ações.
+- [ ] `AuditEvent` em todas estas ações; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
 
 ## 5. Salas, salas exclusivas, bloqueios e regras
 - [ ] `Room`, `RoomAssignment` (blocos semanais com início e fim; libertação prevista mas desligada por flag).
@@ -59,7 +60,7 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [ ] Editar "só esta" ou "esta e as seguintes".
 
 ## 8. Histórico das reservas
-- [ ] `BookingEvent` só de acrescentar (permissões da base de dados incluídas), com "em nome de" e o valor antes e depois.
+- [ ] `BookingEvent` só de acrescentar (permissões da base de dados incluídas), com "em nome de" e o valor antes e depois; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
 - [ ] Cronologia visível ao titular, aos participantes, ao staff do polo e ao admin.
 
 ## 9. Vistas

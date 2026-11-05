@@ -119,8 +119,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=pt-PT
+      PORTAL_OWNER_USER: ${PORTAL_OWNER_USER:?}
+      PORTAL_OWNER_PASSWORD: ${PORTAL_OWNER_PASSWORD:?}
       PORTAL_DB_USER: ${PORTAL_DB_USER:?}
       PORTAL_DB_PASSWORD: ${PORTAL_DB_PASSWORD:?}
+      PORTAL_BACKUP_USER: ${PORTAL_BACKUP_USER:?}
+      PORTAL_BACKUP_PASSWORD: ${PORTAL_BACKUP_PASSWORD:?}
     volumes:
       - db_data:/var/lib/postgresql
       - ./db/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
@@ -143,14 +147,14 @@ services:
       TZ: Europe/Lisbon
       PGHOST: db
       PGDATABASE: ${POSTGRES_DB:?}
-      PGUSER: ${POSTGRES_USER:?}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGUSER: ${PORTAL_BACKUP_USER:?}
+      PGPASSWORD: ${PORTAL_BACKUP_PASSWORD:?}
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?}
       BACKUP_TIME: ${BACKUP_TIME:-02:30}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     volumes:
       - type: bind
-        source: ./backups
+        source: ${BACKUP_DIR:-./backups}
         target: /backups
         bind:
           create_host_path: false
@@ -176,8 +180,27 @@ services:
     command: ["python", "manage.py", "migrate", "--noinput"]
     environment:
       <<: *portal-env
-      DB_USER: ${POSTGRES_USER:?}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_USER: ${PORTAL_OWNER_USER:?}
+      DB_PASSWORD: ${PORTAL_OWNER_PASSWORD:?}
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # One-off: docker compose --profile ops run --rm create-admin
+  # The admin credentials exist only here; the long-running services never get them. Optional for
+  # Compose, so the password can leave .env after the first run; ensure_admin refuses to run without.
+  create-admin:
+    <<: *portal
+    profiles:
+      - ops
+    command: ["python", "manage.py", "ensure_admin"]
+    environment:
+      <<: *portal-env
+      PORTAL_ADMIN_EMAIL: ${PORTAL_ADMIN_EMAIL:-}
+      PORTAL_ADMIN_PASSWORD: ${PORTAL_ADMIN_PASSWORD:-}
+      PORTAL_ADMIN_NAME: ${PORTAL_ADMIN_NAME:-Admin}
     networks:
       - backend
     depends_on:

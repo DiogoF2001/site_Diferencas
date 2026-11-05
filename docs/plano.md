@@ -20,7 +20,7 @@ Usa Docker Compose, por isso pode correr num VPS, na cloud ou no centro. O síti
 
 #### Papéis por polo
 
-Cada pessoa tem uma só conta. Os papéis vêm de filiações (pessoa + polo + papel), e uma pessoa pode ter papéis diferentes em polos diferentes.
+Cada pessoa tem uma só conta (a conta técnica do Admin é a exceção). Os papéis vêm de filiações (pessoa + polo + papel), e uma pessoa pode ter papéis diferentes em polos diferentes.
 
 #### Sem serviços pagos
 
@@ -60,7 +60,7 @@ Não depende de Google nem de Microsoft. A única dependência externa é um ser
 - **Profissional**, com dois subpapéis: **Residente** e **Estagiária**. Têm as mesmas permissões no módulo de Salas; a separação existe para serviços futuros.
 - **Secretariado:** gere a operação diária do polo.
 - **Coordenação / Direção técnica:** tem acesso total ao polo e também aos relatórios.
-- **Admin** (global, criado na instalação): tem tudo, incluindo a área técnica.
+- **Admin** (global, criado na instalação): tem tudo, incluindo a área técnica. É uma conta técnica, sem filiações, sem horário e sem horas próprias. Quem também trabalhe como profissional usa outra conta, com outro e-mail.
 
 ### Permissões (dentro do polo)
 
@@ -68,8 +68,8 @@ Não depende de Google nem de Microsoft. A única dependência externa é um ser
 |---|---|---|---|---|
 | Ver ocupação (livre/ocupado) | ✓ | ✓ | ✓ | ✓ |
 | Ver detalhes e histórico de todas as reservas | só as suas* | ✓ | ✓ | ✓ |
-| Submeter pedidos de reserva | ✓ | marca diretamente | marca diretamente | ✓ |
-| Adicionar participantes às suas reservas | ✓ | ✓ | ✓ | ✓ |
+| Submeter pedidos de reserva | ✓ | marca diretamente | marca diretamente | em nome de outra pessoa |
+| Adicionar participantes às suas reservas | ✓ | ✓ | ✓ | em nome de outra pessoa |
 | Aprovar e recusar pedidos; alterar qualquer reserva | – | ✓ | ✓ | ✓ |
 | Gerir salas, salas exclusivas, bloqueios e regras do polo | – | ✓ | ✓ | ✓ |
 | Anular bloqueios automáticos (feriados) | – | ✓ | ✓ | ✓ |
@@ -100,7 +100,7 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 - **Sem registo público.** As contas são criadas por convite: quem gere o polo cria a conta com o e-mail, e a pessoa recebe um link para definir a palavra-passe. O link só funciona uma vez e expira em 48 h.
 - **Admin "hardcoded":** a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.
 - **2FA:** obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.
-- **Saída de pessoas:** as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho nesse dia.
+- **Saída de pessoas:** as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa.
 - **E-mail:** usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.
 
 ## 6. Módulo de salas
@@ -110,6 +110,7 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 - **Libertação de períodos:** fica prevista no modelo de dados, como uma exceção à atribuição, mas *desligada*. O admin pode ativá-la por polo.
 - **Reservas duplicadas impossíveis:** uma restrição do PostgreSQL impede reservas aprovadas sobrepostas na mesma sala. Isto inclui as atribuições exclusivas e os bloqueios, e vale mesmo que duas pessoas aprovem ao mesmo tempo.
 - **"Livre/ocupado" filtrado no servidor:** das reservas de outras pessoas, o servidor só envia início, fim e "ocupado". Esconder os detalhes só na interface não chegaria.
+- **O que conta como "Ocupado":** só as reservas aprovadas, as atribuições exclusivas e os bloqueios. Os pedidos pendentes de outras pessoas não aparecem a quem é Profissional.
 - **Sem dados de utentes:** as notas das reservas são só para notas logísticas. Isto mantém o serviço fora do regime de dados de saúde.
 
 ## 7. Fluxo de pedidos
@@ -236,7 +237,7 @@ As datas e horas são guardadas em UTC e mostradas na hora de Lisboa.
 - **db:** PostgreSQL;
 - **backup:** cópia diária encriptada da base de dados, guardada fora do servidor, com teste de reposição todos os meses.
 
-Há também um serviço pontual, **migrate**, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação.
+Há também um serviço pontual, **migrate**, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas, que não é superutilizador; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação. O backup usa um utilizador só de leitura, e o superutilizador do PostgreSQL serve só para a inicialização.
 
 Os segredos (incluindo os do admin) ficam num ficheiro de ambiente fora do repositório.
 

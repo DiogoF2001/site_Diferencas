@@ -28,11 +28,27 @@ Para correr os testes:
 docker compose -f deploy/docker-compose.dev.yml run --rm app pytest
 ```
 
+Para usar o backoffice, cria as tabelas, a conta de admin e as traduções:
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py migrate
+```
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py ensure_admin
+```
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app python manage.py compilemessages
+```
+
+Depois entra em <http://127.0.0.1:8000/admin/> com `admin@example.test` e `dev-only-not-a-secret`. O backoffice é só para o admin.
+
 ## Instalação em produção
 
 1. Copia `deploy/.env.example` para `deploy/.env` e substitui todos os valores. O ficheiro indica como gerar a chave do Django e as chaves do `age`. Guarda a chave privada do `age` fora do servidor: sem ela, os backups não se conseguem ler.
 2. Cria a pasta dos backups, com o dono indicado em `BACKUP_UID` e `BACKUP_GID`: `mkdir deploy/backups`.
-3. Arranca os serviços e corre as migrações:
+3. Arranca os serviços, corre as migrações e cria a conta de admin:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d --build --wait
@@ -40,6 +56,29 @@ docker compose -f deploy/docker-compose.yml up -d --build --wait
 
 ```bash
 docker compose -f deploy/docker-compose.yml --profile ops run --rm migrate
+```
+
+```bash
+docker compose -f deploy/docker-compose.yml --profile ops run --rm create-admin
+```
+
+A palavra-passe do `.env` só é usada ao criar a conta, por isso podes apagá-la do ficheiro a seguir. Correr o `create-admin` outra vez nunca muda a palavra-passe da conta.
+
+O PostgreSQL fica com quatro utilizadores, cada um com a sua palavra-passe:
+
+| Utilizador | Usado por | Pode |
+|---|---|---|
+| `POSTGRES_USER` | só a inicialização | tudo (superutilizador) |
+| `PORTAL_OWNER_USER` | `migrate` | criar e alterar tabelas nesta base de dados |
+| `PORTAL_DB_USER` | `app`, `worker`, `create-admin` | ler e escrever linhas, sem criar nem apagar tabelas |
+| `PORTAL_BACKUP_USER` | `backup` | só ler |
+
+Estes utilizadores são criados quando o volume da base de dados é criado. Se mudares os nomes ou as palavras-passe no `.env` depois disso, tens de os alterar também na base de dados.
+
+Para verificar esta configuração em contentores reais, com valores descartáveis e sem tocar nos teus dados:
+
+```bash
+deploy/tests/check-production.sh
 ```
 
 O domínio tem de apontar para o servidor, com as portas 80 e 443 abertas, para o Caddy obter o certificado.
