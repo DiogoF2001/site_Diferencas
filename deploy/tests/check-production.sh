@@ -180,8 +180,26 @@ expect_equal "translations were compiled in the image" polo \
     "$(compose exec -T app python manage.py shell --verbosity 0 --command \
         'from core.models import Location; print(Location._meta.verbose_name)')"
 
+# A secretariat member with an invitation link, as the members page would send it.
+staff_link=$(compose exec -T app python manage.py shell --verbosity 0 --command '
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from core.models import Location, Membership, Role, User
+from core.tokens import password_link_token
+location = Location.objects.create(name="Polo de verificação")
+user = User.objects.create_user("secretariado@example.test", "Secretariado")
+Membership.objects.create(
+    user=user, location=location, role=Role.SECRETARIAT, start_date=timezone.localdate()
+)
+uid = urlsafe_base64_encode(force_bytes(user.pk))
+print(reverse("password_set", args=[uid, password_link_token.make_token(user)]))
+')
+
 if output=$(compose exec -T -e PORTAL_ADMIN_EMAIL="$PORTAL_ADMIN_EMAIL" \
-    -e PORTAL_ADMIN_PASSWORD="$PORTAL_ADMIN_PASSWORD" app python - 2>&1 <<'PY'
+    -e PORTAL_ADMIN_PASSWORD="$PORTAL_ADMIN_PASSWORD" -e STAFF_LINK="$staff_link" \
+    app python - 2>&1 <<'PY'
 import base64
 import hashlib
 import hmac
@@ -278,10 +296,75 @@ confirmed = fetch(
 )
 assert confirmed.status == 302, f"2FA setup: {confirmed.status}"
 assert fetch("/admin/").status == 200, "backoffice after 2FA"
+
+# Secretariat: 2FA is set up in the invitation link, right after the password.
+cookies.clear()
+STAFF = {"username": "secretariado@example.test", "password": "uma-palavra-passe-longa-e-rara"}
+link = fetch(os.environ["STAFF_LINK"])
+assert link.status == 302, f"invitation link: {link.status}"
+set_url = link.headers["Location"]
+set_page = fetch(set_url).read().decode()
+password_set = fetch(
+    set_url,
+    {
+        "csrfmiddlewaretoken": csrf(set_page),
+        "new_password1": STAFF["password"],
+        "new_password2": STAFF["password"],
+    },
+    Referer=f"https://{HOST}{set_url}",
+)
+assert password_set.status == 302, f"password set: {password_set.status}"
+enrol_url = password_set.headers["Location"]
+assert enrol_url == "/conta/2fa/ativar/", enrol_url
+enrol = fetch(enrol_url).read().decode()
+staff_secret = re.search(r'class="secret">([A-Z2-7]+)<', enrol).group(1)
+
+# Halfway through, the password alone does not sign in.
+saved = http.cookies.SimpleCookie(cookies)
+cookies.clear()
+login_page = fetch("/conta/entrar/").read().decode()
+refused = fetch(
+    "/conta/entrar/",
+    {"csrfmiddlewaretoken": csrf(login_page), **STAFF},
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert refused.status == 200, f"password-only staff login: {refused.status}"
+assert "autenticação de dois fatores" in refused.read().decode(), "no 2FA message"
+cookies.clear()
+cookies.update(saved)
+
+enrolled = fetch(
+    enrol_url,
+    {"csrfmiddlewaretoken": csrf(enrol), "token": totp(staff_secret)},
+    Referer=f"https://{HOST}{enrol_url}",
+)
+assert enrolled.status == 302, f"2FA enrolment: {enrolled.status}"
+assert enrolled.headers["Location"] == "/conta/entrar/", enrolled.headers["Location"]
+
+login_page = fetch("/conta/entrar/").read().decode()
+login = fetch(
+    "/conta/entrar/",
+    {"csrfmiddlewaretoken": csrf(login_page), **STAFF},
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert login.status == 302, f"staff login: {login.status}"
+verify_url = fetch("/").headers["Location"]
+assert verify_url.startswith("/conta/2fa/verificar/"), verify_url
+verify_page = fetch(verify_url).read().decode()
+# The code used at enrolment cannot be used again: wait for the next one.
+time.sleep(30 - time.time() % 30 + 1)
+verified = fetch(
+    verify_url,
+    {"csrfmiddlewaretoken": csrf(verify_page), "token": totp(staff_secret)},
+    Referer=f"https://{HOST}{verify_url}",
+)
+assert verified.status == 302, f"staff 2FA code: {verified.status}"
+assert fetch("/").status == 200, "portal after the staff 2FA code"
 PY
 ); then
     pass "WhiteNoise serves the portal's hashed, compressed static files"
     pass "the admin logs in, sets up 2FA and opens the backoffice, using the app's database user"
+    pass "secretariat sets up 2FA in the invitation link and cannot sign in with the password alone"
 else
     fail "WhiteNoise and the backoffice login" "$output"
 fi

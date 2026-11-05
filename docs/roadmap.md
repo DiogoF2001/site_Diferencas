@@ -39,6 +39,11 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [x] Listagem da coordenação: profissionais do polo com os papéis no polo e, opcionalmente, noutros polos (sem atividade). Exportação em CSV.
 - [x] `AuditEvent` em todas estas ações; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
 
+## 4b. Orientações, filiações e auditoria no portal
+- [ ] Ecrã de orientações para o secretariado e a coordenação (`core.manage_mentorships`), com `AuditEvent`.
+- [ ] Alterar o papel ou as datas de uma filiação no portal, com o mesmo teto de papéis e com `AuditEvent`.
+- [ ] Consulta da auditoria de contas pela coordenação (`core.view_audit`), só sobre os membros do seu polo.
+
 ## 5. Salas, salas exclusivas, bloqueios e regras
 - [ ] `Room`, `RoomAssignment` (blocos semanais com início e fim; libertação prevista mas desligada por flag).
 - [ ] `Closure`: feriados nacionais e municipais gerados automaticamente por polo; bloqueios manuais; o secretariado pode anular um feriado, com registo.
@@ -86,3 +91,5 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [ ] Endurecimento: CSP, HSTS, cookies seguros, `check --deploy` limpo.
 - [ ] Backups encriptados fora do servidor e script de teste de reposição.
 - [ ] `docs/runbook.md`: instalação, atualização, reposição de backup, rotação de segredos.
+- [ ] Passkeys (WebAuthn) como alternativa opcional ao TOTP.
+- [ ] Limite de logins por IP, além do limite por e-mail. O IP vem do `X-Forwarded-For` definido pelo Caddy, que é o único ponto de entrada.

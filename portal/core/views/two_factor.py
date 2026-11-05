@@ -1,3 +1,4 @@
+import time
 from base64 import b32encode
 
 import qrcode
@@ -18,6 +19,13 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core.audit import Action, record
 from core.forms import TokenForm
+from core.models import User
+from core.permissions import enrols_two_factor_by_link
+from core.tokens import password_link_token
+
+ENROL_SESSION_KEY = "core.two_factor_enrol"
+# How long after setting the password the 2FA step stays open; after that, a new link.
+ENROL_MINUTES = 30
 
 
 def _next_url(request):
@@ -41,35 +49,103 @@ def _qr_code_svg(url):
     return mark_safe(image.to_string(encoding="unicode"))  # noqa: S308
 
 
-@never_cache
-@sensitive_post_parameters()
-@login_required
-def setup(request):
-    """Add an authenticator app: show the secret, then confirm it with a first code."""
-    user = request.user
-    if user_has_device(user):
-        return redirect(_next_url(request))
+def _pending_device(user):
     device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
     if device is None:
         device = TOTPDevice.objects.create(user=user, name="default", confirmed=False)
-    form = TokenForm(request.POST or None)
-    if form.is_valid():
-        if device.verify_token(form.cleaned_data["token"]):
-            with transaction.atomic():
-                device.confirmed = True
-                device.save(update_fields=["confirmed"])
-                record(Action.TWO_FACTOR_ENABLED, actor=user, target=user)
-            _verified(request, device)
-            messages.success(request, _("Two-factor authentication is on."))
-            return redirect(_next_url(request))
-        form.add_error("token", _("The code is not valid. Check the time on your phone."))
+    return device
+
+
+def _confirm(request, device, form):
+    """Turn the device on if the form has its current code; otherwise explain on the form."""
+    user = device.user
+    if not form.is_valid():
+        return False
+    if device.verify_token(form.cleaned_data["token"]):
+        with transaction.atomic():
+            device.confirmed = True
+            device.save(update_fields=["confirmed"])
+            record(Action.TWO_FACTOR_ENABLED, actor=user, target=user)
+        return True
+    form.add_error("token", _("The code is not valid. Check the time on your phone."))
+    return False
+
+
+def _render_setup(request, device, form, **extra):
     context = {
         "form": form,
         "qr_code": _qr_code_svg(device.config_url),
         "secret": b32encode(device.bin_key).decode(),
-        "next": _next_url(request),
+        **extra,
     }
     return render(request, "core/two_factor_setup.html", context)
+
+
+@never_cache
+@sensitive_post_parameters()
+@login_required
+def setup(request):
+    """Add an authenticator app: show the secret, then confirm it with a first code.
+
+    For the admin, and for anyone who wants 2FA without their role requiring it. Staff whose
+    role requires it never reach this page without a device (see TwoFactorMiddleware): they set
+    it up in the link flow, in `enrol`.
+    """
+    user = request.user
+    if user_has_device(user):
+        return redirect(_next_url(request))
+    device = _pending_device(user)
+    form = TokenForm(request.POST or None)
+    if _confirm(request, device, form):
+        _verified(request, device)
+        messages.success(request, _("Two-factor authentication is on."))
+        return redirect(_next_url(request))
+    return _render_setup(request, device, form, next=_next_url(request))
+
+
+def start_enrolment(request, user):
+    """Called by the link page once the password is set, when the person's role requires 2FA.
+
+    The link's token proved access to the email address; this session carries that proof to the
+    2FA step for ENROL_MINUTES, bound to the new password, so that another link ends it too.
+    """
+    request.session.cycle_key()
+    request.session[ENROL_SESSION_KEY] = {
+        "user": user.pk,
+        "token": password_link_token.make_token(user),
+        "at": int(time.time()),
+    }
+
+
+def _enrolling_user(request):
+    pending = request.session.get(ENROL_SESSION_KEY)
+    if not pending or time.time() - pending["at"] > ENROL_MINUTES * 60:
+        return None
+    user = User.objects.filter(pk=pending["user"]).first()
+    if user is None or not password_link_token.check_token(user, pending["token"]):
+        return None
+    if not enrols_two_factor_by_link(user):
+        return None
+    return user
+
+
+@never_cache
+@sensitive_post_parameters()
+def enrol(request):
+    """Second step of an invitation or recovery link for staff: set up 2FA before signing in."""
+    user = _enrolling_user(request)
+    if user is None:
+        request.session.pop(ENROL_SESSION_KEY, None)
+        return render(request, "core/two_factor_enrol_expired.html", status=400)
+    device = _pending_device(user)
+    form = TokenForm(request.POST or None)
+    if _confirm(request, device, form):
+        del request.session[ENROL_SESSION_KEY]
+        messages.success(request, _("Two-factor authentication is on. You can now sign in."))
+        return redirect("login")
+    if form.errors:
+        record(Action.TWO_FACTOR_FAILED, actor=None, target=user, step="enrol")
+    return _render_setup(request, device, form, enrolling=True)
 
 
 @never_cache

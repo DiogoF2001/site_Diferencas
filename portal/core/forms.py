@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.audit import is_login_locked, normalise_email
 from core.models import Role, Subrole, User
+from core.permissions import lacks_required_two_factor
 
 
 class LoginForm(AuthenticationForm):
@@ -22,6 +23,10 @@ class LoginForm(AuthenticationForm):
             "This account has no access to the portal at the moment. "
             "Please contact your location's secretariat."
         ),
+        "two_factor_missing": _(
+            "This account must set up two-factor authentication before signing in. "
+            "Ask your location's secretariat for a new link."
+        ),
     }
 
     def clean(self):
@@ -37,6 +42,14 @@ class LoginForm(AuthenticationForm):
             raise self._refusal(email, password)
         self.confirm_login_allowed(self.user_cache)
         return self.cleaned_data
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        # Only reached with the right password, so it reveals nothing about the account.
+        if lacks_required_two_factor(user):
+            raise forms.ValidationError(
+                self.error_messages["two_factor_missing"], code="two_factor_missing"
+            )
 
     def _refusal(self, email, password):
         """Explain a refusal only to whoever knows the password, so it reveals no accounts.

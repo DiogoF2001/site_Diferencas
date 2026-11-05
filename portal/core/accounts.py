@@ -141,7 +141,7 @@ def set_account_active(actor, target, active):
 
 
 def reset_two_factor(actor, target):
-    """Remove the target's devices; they set up a new one at their next request if required."""
+    """Remove the target's devices. Staff whose role requires 2FA then need a new link."""
     if not permissions.can_manage_account(actor, target):
         raise PermissionDenied
     _delete_devices(target, actor=actor)

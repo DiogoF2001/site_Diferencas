@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordResetForm
 from django.db import transaction
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
@@ -16,8 +16,9 @@ from core import accounts
 from core.audit import Action, record
 from core.forms import LoginForm
 from core.models import Location, Membership
-from core.permissions import is_admin, locations_with_perm
+from core.permissions import enrols_two_factor_by_link, is_admin, locations_with_perm
 from core.tokens import password_link_token
+from core.views.two_factor import start_enrolment
 
 
 class LoginView(auth_views.LoginView):
@@ -31,7 +32,11 @@ class LoginView(auth_views.LoginView):
 
 
 class PasswordSetView(auth_views.PasswordResetConfirmView):
-    """The page behind invitation and recovery links. It never signs the person in."""
+    """The page behind invitation and recovery links. It never signs the person in.
+
+    Staff whose role requires 2FA and who have no device go straight on to set it up (plan,
+    section 5): they cannot sign in without it, so leaving halfway means asking for a new link.
+    """
 
     template_name = "core/password_set.html"
     token_generator = password_link_token
@@ -40,6 +45,9 @@ class PasswordSetView(auth_views.PasswordResetConfirmView):
     def form_valid(self, form):
         response = super().form_valid(form)
         record(Action.PASSWORD_SET, actor=self.user, target=self.user)
+        if enrols_two_factor_by_link(self.user):
+            start_enrolment(self.request, self.user)
+            return redirect("two_factor_enrol")
         messages.success(self.request, _("Your password is set. You can now sign in."))
         return response
 

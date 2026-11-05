@@ -162,7 +162,10 @@ def account_reset_two_factor(request, location_id, user_id):
     accounts.reset_two_factor(request.user, target)
     messages.success(
         request,
-        _("Two-factor authentication of %(name)s was reset. They set it up again at next sign-in.")
+        _(
+            "Two-factor authentication of %(name)s was reset. If their role requires it, "
+            "they need a new link to set it up again."
+        )
         % {"name": target},
     )
     return redirect("member_list", location.pk)

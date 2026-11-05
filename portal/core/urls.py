@@ -12,6 +12,7 @@ urlpatterns = [
     path("conta/definir/<uidb64>/<token>/", auth.PasswordSetView.as_view(), name="password_set"),
     path("conta/recuperar/", auth.SelfPasswordResetView.as_view(), name="password_reset"),
     path("conta/2fa/configurar/", two_factor.setup, name="two_factor_setup"),
+    path("conta/2fa/ativar/", two_factor.enrol, name="two_factor_enrol"),
     path("conta/2fa/verificar/", two_factor.verify, name="two_factor_verify"),
     path("polos/<int:location_id>/membros/", members.member_list, name="member_list"),
     path("polos/<int:location_id>/membros/novo/", members.member_add, name="member_add"),

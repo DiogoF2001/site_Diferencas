@@ -10,7 +10,7 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 |---|---|---|
 | **django-otp** (licença Unlicense) para o TOTP | `pyotp` com modelo próprio; django-two-factor-auth | Traz o modelo do dispositivo, a tolerância de relógio, a proteção contra reutilização de códigos e o atraso progressivo após códigos errados. O django-two-factor-auth traria mais dependências (formtools, phonenumbers) e ecrãs que não queremos |
 | **qrcode** (BSD) para o QR em SVG | Pillow; QR gerado no browser | Python puro, SVG sem Pillow, e nada de JavaScript de terceiros |
-| Limite de tentativas de login contado no `AuditEvent` | django-axes | Os logins falhados já têm de ficar na auditoria (plano, secção 11). Contar essas linhas evita uma dependência e uma segunda tabela. Por e-mail, não por IP: atrás do Caddy o IP exigiria confiar em cabeçalhos, e o objetivo é proteger cada conta |
+| Limite de tentativas de login contado no `AuditEvent` | django-axes | Os logins falhados já têm de ficar na auditoria (plano, secção 11). Contar essas linhas evita uma dependência e uma segunda tabela. Por e-mail, para proteger cada conta. O limite por IP fica para a tarefa 14 (decisão da revisão), com o IP do `X-Forwarded-For` definido pelo Caddy |
 | Convites e recuperação com o mesmo token de uso único (`PasswordResetTokenGenerator`, 48 h), com `is_active` no hash | Modelo `Invitation` | O token deixa de valer quando a palavra-passe é definida, quando a pessoa entra ou quando a conta é desativada. Não guarda nada na base de dados. Um "convite" é só um link de definição de palavra-passe para uma conta que nunca teve uma |
 | O acesso por filiação é verificado no backend de autenticação (`user_can_authenticate`) | Worker que desativa contas; middleware próprio | O Django chama-o no login e em cada pedido, por isso a sessão de uma estagiária termina à meia-noite do último dia sem esperar pelo worker e sem mexer em `is_active` |
 | Um middleware obriga ao segundo fator antes de qualquer página, incluindo o backoffice | Decorador em cada vista | Não depende de cada vista se lembrar. O backoffice tem ainda `has_permission` a exigir a sessão verificada, e o `/admin/login/` redireciona para o login do portal, que é o que tem o limite de tentativas |
@@ -35,6 +35,12 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 - **"Esqueci-me da palavra-passe" público:** fica preparado, mas desligado (`PORTAL_SELF_PASSWORD_RESET=0`). Por agora, só o secretariado e a coordenação enviam links.
 - **Reativar uma conta:** possível, com a mesma regra de desativar.
 
+**Decididas pelo utilizador na revisão do PR #6, e registadas no plano (secção 5) e no roadmap:**
+
+- **Sem 2FA, o staff não entra só com a palavra-passe.** Quem tem 2FA obrigatório e não tem dispositivo configura-o logo a seguir a definir a palavra-passe, no fluxo do link de convite ou de recuperação (o token prova o acesso ao e-mail). Quem não o concluir precisa de um link novo. O Admin mantém o fluxo do `ensure_admin` e o `reset_2fa`.
+- **Tarefa 4b**, antes da 5: ecrã de orientações (`core.manage_mentorships`), alterar o papel ou as datas de uma filiação no portal, e consulta da auditoria pela coordenação (`core.view_audit`).
+- **Tarefa 14:** passkeys opcionais e limite de logins por IP, com o IP do `X-Forwarded-For` do Caddy.
+
 **Interpretações e valores escolhidos por mim, a confirmar na revisão:**
 
 | Regra implementada | Base |
@@ -47,6 +53,9 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 | Quem não sabe a palavra-passe vê sempre "E-mail ou palavra-passe incorretos". Só quem acerta na palavra-passe de uma conta sem acesso vê "Esta conta não tem acesso ao portal neste momento" | Não revela que contas existem |
 | O envio de um link a uma conta que nunca definiu palavra-passe é um novo convite | Um convite expirado resolve-se com o mesmo botão |
 | O "Esqueci-me" público, quando for ligado, só envia para contas que já têm palavra-passe (comportamento do Django) | As outras precisam de um convite novo, pedido ao secretariado |
+| No fluxo do link, o passo do 2FA fica aberto 30 minutos, só na sessão do browser que usou o link, e acaba se for usado outro link ou a conta for desativada. No fim, a pessoa vai para o login, que pede a palavra-passe e o código | Revisão do PR #6. O passo não inicia sessão, tal como a página da palavra-passe |
+| Também configura o 2FA no link quem só tem um papel de secretariado ou coordenação futuro | Sem isso, quem é convidado antes da data de início ficaria sem conseguir entrar nesse dia |
+| Uma sessão sem dispositivo de quem passou a precisar de 2FA (papel que começou, 2FA reposto) termina, com a mensagem para pedir um link novo. O ecrã de configuração com sessão iniciada fica só para o Admin e para os profissionais que queiram o 2FA | Revisão do PR #6: a palavra-passe sozinha não chega para o staff |
 | As ações feitas pelo Admin no backoffice (ativar/desativar contas, criar/alterar/apagar filiações) também ficam no `AuditEvent` | Plano, secção 11 |
 
 ## Ficheiros criados ou alterados
@@ -60,7 +69,7 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 - `portal/core/forms.py`: login, novo membro e código 2FA.
 - `portal/core/db.py`: `revoke_changes()` para as tabelas só de acrescentar.
 - `portal/core/views/` (`auth.py`, `two_factor.py`, `members.py`; `health.py` é o antigo `views.py`).
-- `portal/core/templates/core/`: base, login, palavra-passe, 2FA, início, membros, listagem e os e-mails.
+- `portal/core/templates/core/`: base, login, palavra-passe, 2FA (incluindo o passo do link e a página de passo expirado), início, membros, listagem e os e-mails.
 - `portal/core/static/core/` (`portal.css`, `logo.png` copiado do protótipo).
 - `portal/core/management/commands/reset_2fa.py`.
 - `portal/core/migrations/0002_audit_event.py`.
@@ -68,7 +77,7 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 
 **Alterados**
 - `portal/core/models.py`: `AuditEvent` e as bases só de acrescentar.
-- `portal/core/permissions.py`: `has_portal_access`, `requires_two_factor`, `members_of`, `can_send_recovery_link`.
+- `portal/core/permissions.py`: `has_portal_access`, `requires_two_factor`, `lacks_required_two_factor`, `enrols_two_factor_by_link`, `members_of`, `can_send_recovery_link`.
 - `portal/core/admin.py`: backoffice só com 2FA, auditoria das alterações, `AuditEvent` só de leitura, sem o admin dos dispositivos TOTP (mostraria os segredos).
 - `portal/config/settings.py`, `portal/config/urls.py`, `portal/core/urls.py`, `portal/core/apps.py`.
 - `portal/requirements/` (`base.in`, `base.txt`, `dev.txt`).
@@ -82,7 +91,9 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 
 **Entrar.** O login (`/conta/entrar/`) pede e-mail e palavra-passe. Antes de verificar a palavra-passe, conta os `AuditEvent` de login falhado para esse e-mail nos últimos 15 minutos; com 5 ou mais, recusa. Cada falha (incluindo para e-mails sem conta) fica no `AuditEvent` através do sinal `user_login_failed` do Django. O backend `MembershipBackend` só aceita a conta se `has_portal_access` for verdade: o Admin, ou uma filiação ativa hoje num polo ativo. O Django volta a fazer esta verificação em cada pedido, por isso uma sessão aberta termina quando a filiação acaba ou a conta é desativada.
 
-**Segundo fator.** Depois da palavra-passe, o `TwoFactorMiddleware` manda quem tem um dispositivo para `/conta/2fa/verificar/`, e quem não tem, mas precisa (Admin, secretariado, coordenação), para `/conta/2fa/configurar/`. Até lá, só essas páginas e o "Sair" respondem. A configuração mostra um QR e a chave, e só fica ativa depois de um primeiro código certo. Ao verificar, a sessão muda de chave. Os códigos errados ficam na auditoria e o django-otp atrasa as tentativas seguintes.
+**Segundo fator.** Depois da palavra-passe, o `TwoFactorMiddleware` manda quem tem um dispositivo para `/conta/2fa/verificar/`. Até lá, só essa página e o "Sair" respondem. Ao verificar, a sessão muda de chave. Os códigos errados ficam na auditoria e o django-otp atrasa as tentativas seguintes.
+
+**Primeira configuração do 2FA.** O secretariado e a coordenação sem dispositivo não entram: o login recusa-os, depois de a palavra-passe estar certa, com a mensagem para pedirem um link novo (`lacks_required_two_factor`). Configuram o 2FA no fluxo do link: depois de definirem a palavra-passe em `/conta/definir/…/`, a página guarda na sessão a conta, um token ligado à nova palavra-passe e a hora, e segue para `/conta/2fa/ativar/`. Essa página mostra o QR e a chave, e só ativa o dispositivo com um primeiro código certo, dentro de 30 minutos e enquanto o token for válido. Os códigos errados ficam na auditoria e são atrasados pelo django-otp. Depois a pessoa entra normalmente, com a palavra-passe e o código. Se uma sessão iniciada perder o dispositivo (2FA reposto) ou ganhar um papel que o exige, o middleware termina-a. O Admin e os profissionais configuram o 2FA em `/conta/2fa/configurar/`, já com a sessão iniciada.
 
 **Convidar e recuperar.** Em "Membros" → "Adicionar membro", o secretariado ou a coordenação escolhe o papel (só até ao seu nível no polo). Um e-mail novo cria a conta sem palavra-passe e envia o convite; um e-mail existente recebe só a filiação. Tudo corre numa transação: se o e-mail falhar, não fica conta nem filiação. O link leva a `/conta/definir/…/`, só funciona uma vez e expira em 48 h. "Enviar link da palavra-passe" manda um convite ou um link de recuperação, conforme a conta já tenha ou não palavra-passe, a quem tenha filiação ativa ou futura nesse polo, com o limite de 3 por hora por conta.
 
@@ -100,12 +111,12 @@ Corridos no Docker, a partir da raiz do repositório:
 
 | Comando | Resultado |
 |---|---|
-| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 513 passaram (425 antes desta tarefa) |
+| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 537 passaram (425 antes desta tarefa; 513 na primeira versão do PR) |
 | `... run --rm --no-deps app ruff check .` | sem erros |
 | `... run --rm --no-deps app ruff format --check .` | sem alterações |
 | `... run --rm app python manage.py makemigrations --check --dry-run` | sem migrações em falta |
 | `docker compose -f deploy/docker-compose.yml run --rm --no-deps app python manage.py check --deploy --fail-level WARNING` | sem avisos (com um `.env` descartável copiado do `.env.example`, como na CI) |
-| `deploy/tests/check-production.sh` | todas as verificações passaram, incluindo as 4 novas da tabela de auditoria e o login do admin com configuração do 2FA |
+| `deploy/tests/check-production.sh` | todas as verificações passaram, incluindo as 4 novas da tabela de auditoria, o login do admin com configuração do 2FA e o convite de um membro do secretariado: palavra-passe, 2FA no link, recusa só com a palavra-passe a meio e login com código |
 | `... run --rm --no-deps app pip-audit ...` | sem vulnerabilidades conhecidas |
 
 **Ecrãs:** não foram vistos num browser. Os testes renderizam todos os templates, e o `check-production.sh` percorre o login e a configuração do 2FA na imagem de produção.
@@ -117,14 +128,14 @@ Corridos no Docker, a partir da raiz do repositório:
 - **A imagem de produção deixou de construir:** as definições passaram a exigir o SMTP fora do modo de desenvolvimento, e o `collectstatic` do Dockerfile corre com `DEBUG=0`. Acrescentei valores descartáveis no mesmo passo, como já se fazia para a base de dados.
 - **Testes antigos do backoffice:** entravam sem 2FA. Passaram a usar `login_verified`, e os do login do backoffice foram substituídos por testes do redirecionamento para o login do portal e da exigência do 2FA.
 - **Traduções "fuzzy":** o `makemessages` propôs traduções erradas para textos novos parecidos com antigos (por exemplo "Members" → "filiação"). Foram todas revistas à mão. "ativa"/"desativada" para contas usam um contexto próprio, para não colidir com "ativo" do polo.
-- **Primeira configuração do 2FA:** quem descobrir a palavra-passe de alguém do staff que ainda não configurou o 2FA pode configurá-lo no lugar dessa pessoa. É inerente à primeira configuração; o convite por e-mail e a auditoria reduzem o risco. A pessoa legítima dá por isso ao entrar, e o 2FA pode ser reposto.
+- **Primeira configuração do 2FA (revisão do PR #6):** na primeira versão, quem descobrisse a palavra-passe de alguém do staff sem 2FA podia configurá-lo no lugar dessa pessoa. Agora a configuração exige o token do link, ou seja, acesso ao e-mail.
+- **Middleware e mensagens:** para mostrar a mensagem depois de terminar a sessão, o `TwoFactorMiddleware` passou para depois do `MessageMiddleware`.
 
 ## Pendentes para tarefas seguintes
 
-- **Consulta da auditoria pela coordenação** (`core.view_audit`, "membros do seu polo"): o registo já existe; falta o ecrã.
-- **Orientações:** o plano diz que o secretariado e a coordenação as definem, e a auditoria inclui-as, mas o roadmap não tem um ecrã para isso. Hoje só o Admin as cria no backoffice, sem auditoria.
-- **Alterar uma filiação** (mudar o papel ou as datas) no portal: hoje só se adiciona ou remove; o Admin altera no backoffice, com auditoria.
-- **Passkeys** (plano, secção 5): não implementadas; só TOTP.
+- **Tarefa 4b** (acrescentada ao roadmap na revisão): ecrã de orientações, alterar uma filiação no portal e consulta da auditoria pela coordenação.
+- **Tarefa 14:** passkeys opcionais e limite de logins por IP.
+- **Papel de staff que começa mais tarde:** quem já tinha palavra-passe como profissional e passa a ter um papel de secretariado ou coordenação deixa de conseguir entrar no dia em que o papel começa, até usar um link novo. O secretariado pode enviá-lo antes.
 - **Tarefa 8:** usar `core.db.revoke_changes("salas_bookingevent")` na migração do `BookingEvent` e acrescentar as verificações ao `check-production.sh`, como aqui.
 - **Tarefa 13:** o envio dos e-mails é síncrono, no pedido. Quando houver notificações, pode passar para o worker.
 - **Tarefa 14:** CSP. Os templates não têm JavaScript nem estilos inline (o QR é SVG inline), por isso uma CSP restrita deve encaixar.

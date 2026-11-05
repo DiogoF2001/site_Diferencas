@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import QuerySet
 from django.utils import timezone
+from django_otp import user_has_device
 
 from core.models import Location, Membership, Mentorship, Role, Subrole, User
 
@@ -206,6 +207,27 @@ def requires_two_factor(user):
     if not _can_hold_memberships(user):
         return False
     return Membership.objects.active_on().filter(user=user, role__in=TWO_FACTOR_ROLES).exists()
+
+
+def lacks_required_two_factor(user):
+    """Plan, section 5: staff whose role requires 2FA and who have no device cannot sign in.
+
+    The password alone does not prove enough for them: they need a new invitation or recovery
+    link, whose token proves access to the email address, and set up 2FA right after it. The
+    admin is the exception and sets it up after signing in (ensure_admin, reset_2fa).
+    """
+    return not is_admin(user) and requires_two_factor(user) and not user_has_device(user)
+
+
+def enrols_two_factor_by_link(user):
+    """Whether the link's password step goes on to set up 2FA.
+
+    Future roles count too, so that someone invited ahead of the start date can sign in on it.
+    """
+    if not _can_hold_memberships(user) or user_has_device(user):
+        return False
+    memberships = Membership.objects.filter(user=user, role__in=TWO_FACTOR_ROLES)
+    return memberships.overlapping(timezone.localdate()).exists()
 
 
 def members_of(location) -> QuerySet:

@@ -49,8 +49,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django_otp.middleware.OTPMiddleware",
-    "core.middleware.TwoFactorMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "core.middleware.TwoFactorMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
