@@ -9,7 +9,7 @@ Um ficheiro por tarefa do [roadmap](../roadmap.md), escrito à medida que se tra
 | 2. Núcleo: utilizadores, polos e filiações | feita | [#4](https://github.com/DiogoF2001/site_Diferencas/pull/4) | [tarefa-02-nucleo.md](tarefa-02-nucleo.md) |
 | 3. Motor de permissões | feita | [#5](https://github.com/DiogoF2001/site_Diferencas/pull/5) | [tarefa-03-permissoes.md](tarefa-03-permissoes.md) |
 | 4. Contas e autenticação | feita | [#6](https://github.com/DiogoF2001/site_Diferencas/pull/6) | [tarefa-04-contas.md](tarefa-04-contas.md) |
-| 4b. Orientações, filiações e auditoria no portal | em revisão | – | [tarefa-04b-orientacoes.md](tarefa-04b-orientacoes.md) |
+| 4b. Orientações, filiações e auditoria no portal | em revisão | [#7](https://github.com/DiogoF2001/site_Diferencas/pull/7) | [tarefa-04b-orientacoes.md](tarefa-04b-orientacoes.md) |
 
 ## Como escrever um registo
 
