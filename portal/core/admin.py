@@ -1,9 +1,11 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin import AdminSite
 from django.contrib.auth.models import Group
+from django.utils.translation import gettext as _
 from django_otp import user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from core import accounts
 from core.audit import Action, membership_snapshot, record
 from core.models import AuditEvent, Location, Membership, Mentorship, User
 
@@ -73,6 +75,24 @@ class MembershipAdmin(admin.ModelAdmin):
         if before:
             details["before"] = before
         record(action, actor=request.user, target=obj.user, location=obj.location, **details)
+        if before is None or before["role"] != obj.role:
+            self._send_two_factor_link(request, obj)
+
+    def _send_two_factor_link(self, request, membership):
+        """As in the portal; here a failed email only warns, since the change is already saved."""
+        try:
+            sent = accounts.send_two_factor_link(request, membership, actor=request.user)
+        except accounts.EmailLimitReached:
+            self.message_user(
+                request, _("Too many emails to this address in the last hour."), messages.WARNING
+            )
+        except OSError:
+            self.message_user(
+                request, _("The email could not be sent. Please try again."), messages.WARNING
+            )
+        else:
+            if sent:
+                self.message_user(request, _("The link to set up 2FA was sent by email."))
 
     def delete_model(self, request, obj):
         before = membership_snapshot(obj)

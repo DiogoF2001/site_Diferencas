@@ -195,6 +195,18 @@ Membership.objects.create(
 )
 uid = urlsafe_base64_encode(force_bytes(user.pk))
 print(reverse("password_set", args=[uid, password_link_token.make_token(user)]))
+# Someone who has signed in before as a professional and whose secretariat role starts today.
+other = User.objects.create_user(
+    "acumula@example.test", "Acumula", "outra-palavra-passe-longa-e-rara",
+    last_login=timezone.now(),
+)
+Membership.objects.create(
+    user=other, location=location, role=Role.PROFESSIONAL, subrole="resident",
+    start_date=timezone.localdate(),
+)
+Membership.objects.create(
+    user=other, location=location, role=Role.SECRETARIAT, start_date=timezone.localdate()
+)
 ')
 
 if output=$(compose exec -T -e PORTAL_ADMIN_EMAIL="$PORTAL_ADMIN_EMAIL" \
@@ -360,11 +372,40 @@ verified = fetch(
 )
 assert verified.status == 302, f"staff 2FA code: {verified.status}"
 assert fetch("/").status == 200, "portal after the staff 2FA code"
+
+# Grace period: a new secretariat role for someone who signed in before, without 2FA.
+cookies.clear()
+login_page = fetch("/conta/entrar/").read().decode()
+login = fetch(
+    "/conta/entrar/",
+    {
+        "csrfmiddlewaretoken": csrf(login_page),
+        "username": "acumula@example.test",
+        "password": "outra-palavra-passe-longa-e-rara",
+    },
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert login.status == 302, f"grace login: {login.status}"
+only_setup = fetch("/")
+assert only_setup.status == 302, f"portal during the grace period: {only_setup.status}"
+setup_url = only_setup.headers["Location"]
+assert setup_url.startswith("/conta/2fa/configurar/"), setup_url
+setup = fetch(setup_url).read().decode()
+grace_secret = re.search(r'class="secret">([A-Z2-7]+)<', setup).group(1)
+# The confirmation email cannot reach smtp.example.test here: it must not undo the 2FA.
+confirmed = fetch(
+    setup_url,
+    {"csrfmiddlewaretoken": csrf(setup), "token": totp(grace_secret)},
+    Referer=f"https://{HOST}{setup_url}",
+)
+assert confirmed.status == 302, f"grace 2FA setup: {confirmed.status}"
+assert fetch("/").status == 200, "portal after setting up 2FA in the grace period"
 PY
 ); then
     pass "WhiteNoise serves the portal's hashed, compressed static files"
     pass "the admin logs in, sets up 2FA and opens the backoffice, using the app's database user"
     pass "secretariat sets up 2FA in the invitation link and cannot sign in with the password alone"
+    pass "a new secretariat role within the grace period signs in only to set up 2FA"
 else
     fail "WhiteNoise and the backoffice login" "$output"
 fi

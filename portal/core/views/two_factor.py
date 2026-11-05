@@ -8,7 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.encoding import force_str
+from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
@@ -17,11 +18,12 @@ from django_otp import login as otp_login
 from django_otp import user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from core import accounts
 from core.audit import Action, record
-from core.forms import TokenForm
+from core.forms import PasswordCheckForm, TokenForm
 from core.models import User
-from core.permissions import enrols_two_factor_by_link
-from core.tokens import password_link_token
+from core.permissions import enrols_two_factor_by_link, is_admin
+from core.tokens import password_link_token, two_factor_link_token
 
 ENROL_SESSION_KEY = "core.two_factor_enrol"
 # How long after setting the password the 2FA step stays open; after that, a new link.
@@ -87,9 +89,9 @@ def _render_setup(request, device, form, **extra):
 def setup(request):
     """Add an authenticator app: show the secret, then confirm it with a first code.
 
-    For the admin, and for anyone who wants 2FA without their role requiring it. Staff whose
-    role requires it never reach this page without a device (see TwoFactorMiddleware): they set
-    it up in the link flow, in `enrol`.
+    For the admin, for anyone who wants 2FA without their role requiring it, for someone with an
+    upcoming role that will, and for staff within the grace period (see TwoFactorMiddleware).
+    Only the password was given here, so everyone but the admin gets an email saying so.
     """
     user = request.user
     if user_has_device(user):
@@ -98,6 +100,8 @@ def setup(request):
     form = TokenForm(request.POST or None)
     if _confirm(request, device, form):
         _verified(request, device)
+        if not is_admin(user):
+            accounts.send_two_factor_notice(user)
         messages.success(request, _("Two-factor authentication is on."))
         return redirect(_next_url(request))
     return _render_setup(request, device, form, next=_next_url(request))
@@ -127,6 +131,34 @@ def _enrolling_user(request):
     if not enrols_two_factor_by_link(user):
         return None
     return user
+
+
+def _user_from_uid(uidb64):
+    try:
+        return User.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)))
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return None
+
+
+@never_cache
+@sensitive_post_parameters()
+def link(request, uidb64, token):
+    """The link sent with a role that requires 2FA: the password, then the `enrol` step."""
+    user = _user_from_uid(uidb64)
+    valid = (
+        user is not None
+        and two_factor_link_token.check_token(user, token)
+        and enrols_two_factor_by_link(user)
+    )
+    if not valid:
+        return render(request, "core/two_factor_link.html", {"validlink": False}, status=400)
+    form = PasswordCheckForm(request.POST or None, user=user)
+    if form.is_valid():
+        start_enrolment(request, user)
+        return redirect("two_factor_enrol")
+    return render(
+        request, "core/two_factor_link.html", {"validlink": True, "form": form, "account": user}
+    )
 
 
 @never_cache

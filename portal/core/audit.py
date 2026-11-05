@@ -48,11 +48,11 @@ def is_login_locked(email):
 
 
 def account_emails_left(user):
-    """Invitation and recovery emails this account can still receive in the current hour."""
+    """Invitation, recovery and 2FA setup emails this account can still receive this hour."""
     since = timezone.now() - timedelta(hours=1)
     sent = AuditEvent.objects.filter(
         target=user,
-        action__in=[Action.INVITATION_SENT, Action.RECOVERY_LINK_SENT],
+        action__in=[Action.INVITATION_SENT, Action.RECOVERY_LINK_SENT, Action.TWO_FACTOR_LINK_SENT],
         created_at__gte=since,
     ).count()
     return max(settings.PORTAL_ACCOUNT_EMAILS_PER_HOUR - sent, 0)

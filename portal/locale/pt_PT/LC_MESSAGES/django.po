@@ -2,12 +2,21 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Portal Diferenças\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 20:36+0000\n"
+"POT-Creation-Date: 2026-11-05 22:10+0000\n"
 "Language: pt_PT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Too many emails to this address in the last hour."
+msgstr "Foram enviados demasiados e-mails para este endereço na última hora."
+
+msgid "The email could not be sent. Please try again."
+msgstr "Não foi possível enviar o e-mail. Tente de novo."
+
+msgid "The link to set up 2FA was sent by email."
+msgstr "O link para configurar o 2FA foi enviado por e-mail."
 
 msgid "Email address"
 msgstr "Endereço de e-mail"
@@ -58,6 +67,12 @@ msgstr "O último dia com acesso. Obrigatória para estagiárias."
 
 msgid "A new account needs a name."
 msgstr "Uma conta nova precisa de um nome."
+
+msgid "Password"
+msgstr "Palavra-passe"
+
+msgid "Wrong password."
+msgstr "Palavra-passe incorreta."
 
 msgid "Code"
 msgstr "Código"
@@ -240,8 +255,14 @@ msgstr "Conta desativada"
 msgid "Account reactivated"
 msgstr "Conta reativada"
 
+msgid "Two-factor setup link sent"
+msgstr "Link de configuração do 2FA enviado"
+
 msgid "Two-factor authentication enabled"
 msgstr "Autenticação de dois fatores ativada"
+
+msgid "Two-factor confirmation sent"
+msgstr "Confirmação de 2FA ativado enviada"
 
 msgid "Two-factor authentication reset"
 msgstr "Autenticação de dois fatores reposta"
@@ -284,6 +305,17 @@ msgstr "Mudar a palavra-passe"
 
 msgid "Sign out"
 msgstr "Sair"
+
+#, python-format
+msgid ""
+"Your role %(role)s at %(location)s starts on %(start)s and requires two-"
+"factor authentication."
+msgstr ""
+"O seu papel de %(role)s no %(location)s começa a %(start)s e exige "
+"autenticação de dois fatores."
+
+msgid "Set it up now"
+msgstr "Configurar agora"
 
 #, python-format
 msgid "Hello, %(name)s,"
@@ -329,6 +361,42 @@ msgstr ""
 
 msgid "Set a new password on the Diferenças portal"
 msgstr "Definir uma nova palavra-passe no Portal Diferenças"
+
+msgid ""
+"Two-factor authentication was turned on for your account on the Diferenças "
+"portal."
+msgstr ""
+"Foi ativada a autenticação de dois fatores na sua conta do Portal "
+"Diferenças."
+
+msgid "If it was not you, contact your location's secretariat."
+msgstr "Se não foi você, contacte o secretariado do seu polo."
+
+msgid "Two-factor authentication was turned on"
+msgstr "Foi ativada a autenticação de dois fatores"
+
+#, python-format
+msgid ""
+"You have the role %(role)s at %(location)s from %(start)s. This role "
+"requires two-factor authentication. You can set it up at this link, with "
+"your current password and an authenticator app:"
+msgstr ""
+"Tem o papel de %(role)s no %(location)s a partir de %(start)s. Este papel "
+"exige autenticação de dois fatores. Pode configurá-la neste link, com a sua "
+"palavra-passe atual e uma app de autenticação:"
+
+#, python-format
+msgid ""
+"The link expires after %(hours)s hours. If you have signed in to the portal "
+"before, you can also set it up after signing in, until %(grace_days)s days "
+"after the role starts."
+msgstr ""
+"O link expira ao fim de %(hours)s horas. Se já entrou antes no portal, "
+"também a pode configurar depois de entrar, até %(grace_days)s dias depois do"
+" início do papel."
+
+msgid "Set up two-factor authentication on the Diferenças portal"
+msgstr "Configurar a autenticação de dois fatores no Portal Diferenças"
 
 msgid "Home"
 msgstr "Início"
@@ -479,6 +547,23 @@ msgstr ""
 "de recuperação."
 
 msgid ""
+"Your new role requires two-factor authentication. Confirm your password to "
+"set it up."
+msgstr ""
+"O seu novo papel exige autenticação de dois fatores. Confirme a sua palavra-"
+"passe para a configurar."
+
+msgid "Continue"
+msgstr "Continuar"
+
+msgid ""
+"This link is no longer valid. It works until two-factor authentication is "
+"set up, and expires after 48 hours."
+msgstr ""
+"Este link já não é válido. Funciona até a autenticação de dois fatores estar"
+" configurada e expira ao fim de 48 horas."
+
+msgid ""
 "Your password is saved. One last step: your role requires two-factor "
 "authentication, so set it up now. Without it, you will not be able to sign "
 "in and will need a new link."
@@ -503,9 +588,6 @@ msgstr "Ativar"
 msgid "Enter the 6-digit code from your authenticator app."
 msgstr "Introduza o código de 6 algarismos da sua app de autenticação."
 
-msgid "Continue"
-msgstr "Continuar"
-
 msgid ""
 "Lost your phone? Ask your location's coordination to reset two-factor "
 "authentication."
@@ -519,14 +601,22 @@ msgstr "A palavra-passe ficou definida. Já pode entrar."
 msgid "Your password has been changed."
 msgstr "A palavra-passe foi alterada."
 
-msgid "Too many emails to this address in the last hour."
-msgstr "Foram enviados demasiados e-mails para este endereço na última hora."
-
-msgid "The invitation email could not be sent. Please try again."
-msgstr "Não foi possível enviar o e-mail do convite. Tente de novo."
-
 msgid "Account created. The invitation was sent by email."
 msgstr "Conta criada. O convite foi enviado por e-mail."
+
+msgid ""
+"This email already had an account. The membership was added and, as the role "
+"requires two-factor authentication, the link to set it up was sent."
+msgstr ""
+"Este e-mail já tinha uma conta. Foi acrescentada a filiação e, como o papel "
+"exige autenticação de dois fatores, foi enviado o link para a configurar."
+
+msgid ""
+"This email already had an account, which never set a password. The "
+"membership was added and the invitation was sent again."
+msgstr ""
+"Este e-mail já tinha uma conta, que nunca definiu a palavra-passe. Foi "
+"acrescentada a filiação e o convite foi enviado de novo."
 
 msgid "This email already had an account. Only the membership was added."
 msgstr "Este e-mail já tinha uma conta. Foi acrescentada só a filiação."
@@ -551,9 +641,6 @@ msgstr ""
 "A autenticação de dois fatores de %(name)s foi reposta. Se o papel o exigir, "
 "precisa de um novo link para a configurar de novo."
 
-msgid "The email could not be sent. Please try again."
-msgstr "Não foi possível enviar o e-mail. Tente de novo."
-
 #, python-format
 msgid "A link was sent to %(email)s."
 msgstr "Foi enviado um link para %(email)s."
@@ -569,3 +656,6 @@ msgstr "A autenticação de dois fatores está ativa. Já pode entrar."
 
 msgid "Too many wrong codes. Please wait a moment and try again."
 msgstr "Demasiados códigos errados. Espere um pouco e tente de novo."
+
+#~ msgid "The invitation email could not be sent. Please try again."
+#~ msgstr "Não foi possível enviar o e-mail do convite. Tente de novo."

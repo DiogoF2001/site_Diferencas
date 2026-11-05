@@ -13,7 +13,7 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core import accounts, permissions
 from core.forms import MemberForm
-from core.models import Location, Membership
+from core.models import AuditEvent, Location, Membership
 
 
 def _location_with_perm(request, location_id, perm):
@@ -74,7 +74,7 @@ def member_add(request, location_id):
     if form.is_valid():
         data = form.cleaned_data
         try:
-            _membership, created = accounts.add_member(
+            _membership, created, sent = accounts.add_member(
                 request,
                 request.user,
                 location,
@@ -91,10 +91,26 @@ def member_add(request, location_id):
             form.add_error(None, _("Too many emails to this address in the last hour."))
         except OSError:
             # smtplib errors are OSErrors; the transaction left no account behind.
-            form.add_error(None, _("The invitation email could not be sent. Please try again."))
+            form.add_error(None, _("The email could not be sent. Please try again."))
         else:
             if created:
                 messages.success(request, _("Account created. The invitation was sent by email."))
+            elif sent == AuditEvent.Action.TWO_FACTOR_LINK_SENT:
+                messages.success(
+                    request,
+                    _(
+                        "This email already had an account. The membership was added and, as the "
+                        "role requires two-factor authentication, the link to set it up was sent."
+                    ),
+                )
+            elif sent == AuditEvent.Action.INVITATION_SENT:
+                messages.success(
+                    request,
+                    _(
+                        "This email already had an account, which never set a password. The "
+                        "membership was added and the invitation was sent again."
+                    ),
+                )
             else:
                 messages.success(
                     request,

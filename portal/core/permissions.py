@@ -5,9 +5,11 @@ Views ask `has_perm_in(user, "salas.approve", location)` and never look at role 
 permission codes raise, so that a typo is a bug in the tests and not a silent refusal.
 """
 
+import datetime
 import enum
 from dataclasses import dataclass
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -210,13 +212,49 @@ def requires_two_factor(user):
 
 
 def lacks_required_two_factor(user):
-    """Plan, section 5: staff whose role requires 2FA and who have no device cannot sign in.
-
-    The password alone does not prove enough for them: they need a new invitation or recovery
-    link, whose token proves access to the email address, and set up 2FA right after it. The
-    admin is the exception and sets it up after signing in (ensure_admin, reset_2fa).
+    """Staff whose role requires 2FA and who have no device yet. The admin is never one of them:
+    it sets 2FA up after signing in (ensure_admin, reset_2fa).
     """
     return not is_admin(user) and requires_two_factor(user) and not user_has_device(user)
+
+
+def two_factor_grace_ends(user):
+    """The first day without the grace period, or None when it does not apply or is over.
+
+    Plan, section 5: when a role that requires 2FA starts, someone without a device keeps signing
+    in with the password for PORTAL_TWO_FACTOR_GRACE_DAYS, counted from the start date as day 1,
+    but only to set 2FA up. Counted from the earliest of those roles still active.
+    """
+    if not lacks_required_two_factor(user):
+        return None
+    memberships = Membership.objects.active_on().filter(user=user, role__in=TWO_FACTOR_ROLES)
+    start = min(memberships.values_list("start_date", flat=True))
+    ends = start + datetime.timedelta(days=settings.PORTAL_TWO_FACTOR_GRACE_DAYS)
+    return ends if timezone.localdate() < ends else None
+
+
+def may_log_in_without_two_factor(user):
+    """Checked at login, before it updates last_login.
+
+    Without a device, staff sign in with the password alone only within the grace period and only
+    if they had signed in before; an account that never did sets 2FA up through its link.
+    """
+    if not lacks_required_two_factor(user):
+        return True
+    return user.last_login is not None and two_factor_grace_ends(user) is not None
+
+
+def upcoming_two_factor_roles(user):
+    """Future roles that will require 2FA from someone with no device, for the portal's notice."""
+    if not _can_hold_memberships(user) or user_has_device(user):
+        return Membership.objects.none()
+    return (
+        Membership.objects.filter(
+            user=user, role__in=TWO_FACTOR_ROLES, start_date__gt=timezone.localdate()
+        )
+        .select_related("location")
+        .order_by("start_date")
+    )
 
 
 def enrols_two_factor_by_link(user):

@@ -1,0 +1,6 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with name=user.full_name %}Hello, {{ name }},{% endblocktranslate %}
+
+{% translate "Two-factor authentication was turned on for your account on the Diferenças portal." %}
+
+{% translate "If it was not you, contact your location's secretariat." %}
+{% endautoescape %}

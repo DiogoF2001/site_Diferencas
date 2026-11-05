@@ -41,6 +41,12 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 - **Tarefa 4b**, antes da 5: ecrã de orientações (`core.manage_mentorships`), alterar o papel ou as datas de uma filiação no portal, e consulta da auditoria pela coordenação (`core.view_audit`).
 - **Tarefa 14:** passkeys opcionais e limite de logins por IP, com o IP do `X-Forwarded-For` do Caddy.
 
+**Decididas pelo utilizador no ajuste do PR #6 (acumulação de papéis), e registadas no plano (secção 5):**
+
+- **Link ao atribuir o papel:** atribuir secretariado ou coordenação a alguém sem dispositivo envia o link de configuração do 2FA, que conta para o limite de envios e fica no `AuditEvent`. Até ao início do papel, o portal mostra um aviso.
+- **Tolerância de 7 dias** (configurável) a partir do início do papel, para quem já entrou antes (`last_login` preenchido): entra com a palavra-passe, mas só acede ao ecrã de configuração do 2FA. Ao concluir, recebe um e-mail de confirmação, que fica no `AuditEvent`. Depois, precisa de um link novo.
+- **Contas que nunca entraram:** só o link. O Admin fica como estava.
+
 **Interpretações e valores escolhidos por mim, a confirmar na revisão:**
 
 | Regra implementada | Base |
@@ -55,7 +61,15 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 | O "Esqueci-me" público, quando for ligado, só envia para contas que já têm palavra-passe (comportamento do Django) | As outras precisam de um convite novo, pedido ao secretariado |
 | No fluxo do link, o passo do 2FA fica aberto 30 minutos, só na sessão do browser que usou o link, e acaba se for usado outro link ou a conta for desativada. No fim, a pessoa vai para o login, que pede a palavra-passe e o código | Revisão do PR #6. O passo não inicia sessão, tal como a página da palavra-passe |
 | Também configura o 2FA no link quem só tem um papel de secretariado ou coordenação futuro | Sem isso, quem é convidado antes da data de início ficaria sem conseguir entrar nesse dia |
-| Uma sessão sem dispositivo de quem passou a precisar de 2FA (papel que começou, 2FA reposto) termina, com a mensagem para pedir um link novo. O ecrã de configuração com sessão iniciada fica só para o Admin e para os profissionais que queiram o 2FA | Revisão do PR #6: a palavra-passe sozinha não chega para o staff |
+| Fora da tolerância, uma sessão sem dispositivo de quem passou a precisar de 2FA (papel que começou, 2FA reposto) termina, com a mensagem para pedir um link novo. Dentro da tolerância, a sessão só chega ao ecrã de configuração | Revisão do PR #6 e ajuste da acumulação de papéis |
+| O link de configuração do 2FA pede a palavra-passe atual, e os erros contam como logins falhados (com o mesmo bloqueio). Depois segue para o mesmo passo `/conta/2fa/ativar/` do convite | O link prova o e-mail; a palavra-passe impede que quem só tenha acesso ao e-mail configure o 2FA no lugar da pessoa. Quem não se lembrar da palavra-passe pede um link de recuperação, que também configura o 2FA |
+| O link de configuração do 2FA vale 48 h, como os outros, e não deixa de valer quando a pessoa entra noutro papel entretanto (ao contrário do link da palavra-passe). Acaba com uma palavra-passe nova, com a conta desativada, quando o papel deixa de existir ou quando já há dispositivo | Quem acumula papéis entra no portal com frequência; se cada login anulasse o link, este quase nunca funcionaria |
+| A uma conta existente que nunca definiu a palavra-passe, o novo papel reenvia o convite em vez do link do 2FA | O convite já termina no passo do 2FA |
+| Se o envio do link falhar (limite ou SMTP), a filiação não é criada e o formulário explica porquê. No backoffice, a filiação fica guardada e aparece um aviso | Igual ao convite no portal. No backoffice o Admin pode reenviar depois |
+| O backoffice envia o link ao criar uma filiação de staff ou ao mudar o papel para staff; guardar sem mudar o papel não envia nada | Evita reenvios a cada gravação |
+| A tolerância conta do início da filiação de staff ativa mais antiga: com início no dia D, entra nos dias D a D+6 e é recusado a partir de D+7 (o "dia 8") | "7 dias a partir do início do papel" |
+| O e-mail de confirmação vai sempre que alguém, exceto o Admin, ativa o 2FA com a sessão iniciada (tolerância, papel futuro ou profissional que o queira). Não vai no passo do link, onde a pessoa já provou o acesso ao e-mail. Se o SMTP falhar, o 2FA fica ativo e o erro vai para os logs | O objetivo é avisar quando só foi usada a palavra-passe. Um servidor de e-mail em baixo não deve impedir ninguém de ativar o 2FA |
+| O aviso do papel futuro aparece em todas as páginas a quem tem sessão iniciada, papel de staff futuro e nenhum dispositivo, com uma ligação para `/conta/2fa/configurar/` | "Até à data de início do papel, mostra no portal um aviso" |
 | As ações feitas pelo Admin no backoffice (ativar/desativar contas, criar/alterar/apagar filiações) também ficam no `AuditEvent` | Plano, secção 11 |
 
 ## Ficheiros criados ou alterados
@@ -77,7 +91,8 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 
 **Alterados**
 - `portal/core/models.py`: `AuditEvent` e as bases só de acrescentar.
-- `portal/core/permissions.py`: `has_portal_access`, `requires_two_factor`, `lacks_required_two_factor`, `enrols_two_factor_by_link`, `members_of`, `can_send_recovery_link`.
+- `portal/core/permissions.py`: `has_portal_access`, `requires_two_factor`, `lacks_required_two_factor`, `enrols_two_factor_by_link`, `two_factor_grace_ends`, `may_log_in_without_two_factor`, `upcoming_two_factor_roles`, `members_of`, `can_send_recovery_link`.
+- Ajuste da acumulação de papéis: `core/context_processors.py`, `core/migrations/0003_audit_two_factor_emails.py` (só as novas escolhas de ação, sem SQL), os templates `two_factor_link.html` e `email/two_factor_link_*` e `email/two_factor_enabled_*`, e `tests/test_two_factor_roles.py`. `PORTAL_TWO_FACTOR_GRACE_DAYS` foi acrescentada às definições, ao `docker-compose.yml` e ao `.env.example`.
 - `portal/core/admin.py`: backoffice só com 2FA, auditoria das alterações, `AuditEvent` só de leitura, sem o admin dos dispositivos TOTP (mostraria os segredos).
 - `portal/config/settings.py`, `portal/config/urls.py`, `portal/core/urls.py`, `portal/core/apps.py`.
 - `portal/requirements/` (`base.in`, `base.txt`, `dev.txt`).
@@ -93,7 +108,9 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 
 **Segundo fator.** Depois da palavra-passe, o `TwoFactorMiddleware` manda quem tem um dispositivo para `/conta/2fa/verificar/`. Até lá, só essa página e o "Sair" respondem. Ao verificar, a sessão muda de chave. Os códigos errados ficam na auditoria e o django-otp atrasa as tentativas seguintes.
 
-**Primeira configuração do 2FA.** O secretariado e a coordenação sem dispositivo não entram: o login recusa-os, depois de a palavra-passe estar certa, com a mensagem para pedirem um link novo (`lacks_required_two_factor`). Configuram o 2FA no fluxo do link: depois de definirem a palavra-passe em `/conta/definir/…/`, a página guarda na sessão a conta, um token ligado à nova palavra-passe e a hora, e segue para `/conta/2fa/ativar/`. Essa página mostra o QR e a chave, e só ativa o dispositivo com um primeiro código certo, dentro de 30 minutos e enquanto o token for válido. Os códigos errados ficam na auditoria e são atrasados pelo django-otp. Depois a pessoa entra normalmente, com a palavra-passe e o código. Se uma sessão iniciada perder o dispositivo (2FA reposto) ou ganhar um papel que o exige, o middleware termina-a. O Admin e os profissionais configuram o 2FA em `/conta/2fa/configurar/`, já com a sessão iniciada.
+**Primeira configuração do 2FA.** O secretariado e a coordenação sem dispositivo não entram: o login recusa-os, depois de a palavra-passe estar certa, com a mensagem para pedirem um link novo (`lacks_required_two_factor`). Configuram o 2FA no fluxo do link: depois de definirem a palavra-passe em `/conta/definir/…/`, a página guarda na sessão a conta, um token ligado à nova palavra-passe e a hora, e segue para `/conta/2fa/ativar/`. Essa página mostra o QR e a chave, e só ativa o dispositivo com um primeiro código certo, dentro de 30 minutos e enquanto o token for válido. Os códigos errados ficam na auditoria e são atrasados pelo django-otp. Depois a pessoa entra normalmente, com a palavra-passe e o código. Se uma sessão iniciada perder o dispositivo (2FA reposto) ou ganhar um papel que o exige, o middleware termina-a, a menos que esteja na tolerância. O Admin e os profissionais configuram o 2FA em `/conta/2fa/configurar/`, já com a sessão iniciada.
+
+**Acumulação de papéis.** Quando o secretariado, a coordenação ou o Admin dão um papel de staff a uma conta existente sem dispositivo, `send_two_factor_link` envia o link `/conta/2fa/link/…/`. O token desse link (`TwoFactorLinkTokenGenerator`) é diferente do da palavra-passe e não inclui o `last_login`. A página pede a palavra-passe atual e segue para o passo `/conta/2fa/ativar/`. Até ao início do papel, o context processor `two_factor_notice` põe um aviso no topo de cada página. Quando o papel começa, quem já tinha entrado antes e ainda não tem dispositivo entra com a palavra-passe durante `PORTAL_TWO_FACTOR_GRACE_DAYS` (`two_factor_grace_ends`, `may_log_in_without_two_factor`), e o middleware só o deixa no ecrã de configuração. Ao concluir, `send_two_factor_notice` envia o e-mail de confirmação e regista `two_factor_notice_sent`.
 
 **Convidar e recuperar.** Em "Membros" → "Adicionar membro", o secretariado ou a coordenação escolhe o papel (só até ao seu nível no polo). Um e-mail novo cria a conta sem palavra-passe e envia o convite; um e-mail existente recebe só a filiação. Tudo corre numa transação: se o e-mail falhar, não fica conta nem filiação. O link leva a `/conta/definir/…/`, só funciona uma vez e expira em 48 h. "Enviar link da palavra-passe" manda um convite ou um link de recuperação, conforme a conta já tenha ou não palavra-passe, a quem tenha filiação ativa ou futura nesse polo, com o limite de 3 por hora por conta.
 
@@ -111,15 +128,17 @@ Corridos no Docker, a partir da raiz do repositório:
 
 | Comando | Resultado |
 |---|---|
-| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 537 passaram (425 antes desta tarefa; 513 na primeira versão do PR) |
+| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 572 passaram (425 antes desta tarefa; 513 na primeira versão do PR, 537 depois da revisão) |
 | `... run --rm --no-deps app ruff check .` | sem erros |
 | `... run --rm --no-deps app ruff format --check .` | sem alterações |
 | `... run --rm app python manage.py makemigrations --check --dry-run` | sem migrações em falta |
 | `docker compose -f deploy/docker-compose.yml run --rm --no-deps app python manage.py check --deploy --fail-level WARNING` | sem avisos (com um `.env` descartável copiado do `.env.example`, como na CI) |
-| `deploy/tests/check-production.sh` | todas as verificações passaram, incluindo as 4 novas da tabela de auditoria, o login do admin com configuração do 2FA e o convite de um membro do secretariado: palavra-passe, 2FA no link, recusa só com a palavra-passe a meio e login com código |
+| `deploy/tests/check-production.sh` | todas as verificações passaram, incluindo as 4 novas da tabela de auditoria, o login do admin com configuração do 2FA e o convite de um membro do secretariado: palavra-passe, 2FA no link, recusa só com a palavra-passe a meio e login com código. Também a tolerância: quem já entrou e ganha hoje um papel de secretariado entra, só chega ao ecrã do 2FA, configura-o (o e-mail de confirmação falha, porque o SMTP é fictício, e o 2FA fica ativo) e depois abre o portal |
 | `... run --rm --no-deps app pip-audit ...` | sem vulnerabilidades conhecidas |
 
 **Ecrãs:** não foram vistos num browser. Os testes renderizam todos os templates, e o `check-production.sh` percorre o login e a configuração do 2FA na imagem de produção.
+
+**Verificação por mutação do ajuste da acumulação de papéis:** 10 mutações às regras novas. Por exemplo, `<` por `<=` no fim da tolerância (o dia 8), retirar a condição do `last_login`, contar a tolerância do papel mais recente, não verificar a palavra-passe no link, não enviar a confirmação, não terminar a sessão depois da tolerância e enviar o link a cada gravação no backoffice. Os testes apanharam 8. As 2 que sobreviveram eram verificações redundantes (o dispositivo no hash do token e a palavra-passe utilizável no link), já garantidas por outras regras, e foram retiradas.
 
 **Verificação por mutação:** parti 17 regras novas, uma a uma (por exemplo, tirar a exigência de filiação no backend, desligar o bloqueio de login, não prefixar as células do CSV, não mudar a chave da sessão depois do 2FA). Duas sobreviveram à primeira: o teto de papéis em `add_member` e a regra do link de recuperação, porque a vista já as travava antes (escolhas do formulário e 404). Acrescentei testes que chamam as funções diretamente, e as 17 passaram a ser apanhadas. O script não fica no repositório.
 
@@ -135,7 +154,8 @@ Corridos no Docker, a partir da raiz do repositório:
 
 - **Tarefa 4b** (acrescentada ao roadmap na revisão): ecrã de orientações, alterar uma filiação no portal e consulta da auditoria pela coordenação.
 - **Tarefa 14:** passkeys opcionais e limite de logins por IP.
-- **Papel de staff que começa mais tarde:** quem já tinha palavra-passe como profissional e passa a ter um papel de secretariado ou coordenação deixa de conseguir entrar no dia em que o papel começa, até usar um link novo. O secretariado pode enviá-lo antes.
+- **Papel de staff que começa mais tarde:** resolvido no ajuste da acumulação de papéis, com o link automático, o aviso e a tolerância de 7 dias.
+- **Tarefa 4b:** ao alterar o papel de uma filiação no portal, chamar `accounts.send_two_factor_link`, como no backoffice.
 - **Tarefa 8:** usar `core.db.revoke_changes("salas_bookingevent")` na migração do `BookingEvent` e acrescentar as verificações ao `check-production.sh`, como aqui.
 - **Tarefa 13:** o envio dos e-mails é síncrono, no pedido. Quando houver notificações, pode passar para o worker.
 - **Tarefa 14:** CSP. Os templates não têm JavaScript nem estilos inline (o QR é SVG inline), por isso uma CSP restrita deve encaixar.

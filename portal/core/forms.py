@@ -4,9 +4,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from core.audit import is_login_locked, normalise_email
+from core.audit import Action, is_login_locked, normalise_email, record
 from core.models import Role, Subrole, User
-from core.permissions import lacks_required_two_factor
+from core.permissions import may_log_in_without_two_factor
 
 
 class LoginForm(AuthenticationForm):
@@ -46,7 +46,7 @@ class LoginForm(AuthenticationForm):
     def confirm_login_allowed(self, user):
         super().confirm_login_allowed(user)
         # Only reached with the right password, so it reveals nothing about the account.
-        if lacks_required_two_factor(user):
+        if not may_log_in_without_two_factor(user):
             raise forms.ValidationError(
                 self.error_messages["two_factor_missing"], code="two_factor_missing"
             )
@@ -105,6 +105,32 @@ class MemberForm(forms.Form):
         if data.get("role") != Role.PROFESSIONAL:
             data["subrole"] = ""
         return data
+
+
+class PasswordCheckForm(forms.Form):
+    """The 2FA setup link asks for the current password: the link proves the email, this the rest.
+
+    Wrong passwords count as failed logins, with the same lockout.
+    """
+
+    password = forms.CharField(
+        label=_("Password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autofocus": True, "autocomplete": "current-password"}),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        if is_login_locked(self.user.email):
+            raise forms.ValidationError(LoginForm.error_messages["locked"], code="locked")
+        if not self.user.check_password(password):
+            record(Action.LOGIN_FAILED, target=self.user, email=normalise_email(self.user.email))
+            raise forms.ValidationError(_("Wrong password."), code="invalid")
+        return password
 
 
 class TokenForm(forms.Form):

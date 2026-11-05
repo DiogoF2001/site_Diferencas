@@ -32,6 +32,14 @@
         {% endfor %}
       </ul>
     {% endif %}
+    {% if upcoming_two_factor_roles %}
+      <div class="alert alert-error" role="status">
+        {% for membership in upcoming_two_factor_roles %}
+          <p>{% blocktranslate with role=membership.get_role_display location=membership.location.name start=membership.start_date|date:"SHORT_DATE_FORMAT" %}Your role {{ role }} at {{ location }} starts on {{ start }} and requires two-factor authentication.{% endblocktranslate %}</p>
+        {% endfor %}
+        <p><a href="{% url 'two_factor_setup' %}">{% translate "Set it up now" %}</a></p>
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

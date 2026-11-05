@@ -67,6 +67,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.two_factor_notice",
             ],
         },
     },
@@ -124,6 +125,9 @@ PORTAL_LOGIN_MAX_FAILURES = int(env("PORTAL_LOGIN_MAX_FAILURES", "5"))
 PORTAL_LOGIN_LOCKOUT_MINUTES = int(env("PORTAL_LOGIN_LOCKOUT_MINUTES", "15"))
 # Invitation and recovery emails per account per hour, whoever asks for them.
 PORTAL_ACCOUNT_EMAILS_PER_HOUR = int(env("PORTAL_ACCOUNT_EMAILS_PER_HOUR", "3"))
+# Days from the start of a role requiring 2FA during which someone who signed in before may still
+# sign in with the password alone, only to set 2FA up (plan, section 5).
+PORTAL_TWO_FACTOR_GRACE_DAYS = int(env("PORTAL_TWO_FACTOR_GRACE_DAYS", "7"))
 
 OTP_TOTP_ISSUER = "Portal Diferenças"
 

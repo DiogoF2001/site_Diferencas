@@ -5,6 +5,7 @@ that every way into an action applies them the same way.
 """
 
 import datetime
+import logging
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -20,7 +21,9 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from core import permissions
 from core.audit import Action, account_emails_left, membership_snapshot, record
 from core.models import Membership, User
-from core.tokens import password_link_token
+from core.tokens import password_link_token, two_factor_link_token
+
+logger = logging.getLogger(__name__)
 
 
 class EmailLimitReached(Exception):
@@ -31,6 +34,12 @@ def password_link(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     path = reverse("password_set", args=[uid, password_link_token.make_token(user)])
     return request.build_absolute_uri(path)
+
+
+def _send(kind, target, context):
+    subject = render_to_string(f"core/email/{kind}_subject.txt", context).strip()
+    body = render_to_string(f"core/email/{kind}_body.txt", context)
+    send_mail(subject, body, None, [target.email])
 
 
 def send_password_link(request, target, *, actor=None, location=None):
@@ -48,19 +57,66 @@ def send_password_link(request, target, *, actor=None, location=None):
         "link": password_link(request, target),
         "hours": settings.PASSWORD_RESET_TIMEOUT // 3600,
     }
-    subject = render_to_string(f"core/email/{kind}_subject.txt", context).strip()
-    body = render_to_string(f"core/email/{kind}_body.txt", context)
-    send_mail(subject, body, None, [target.email])
+    _send(kind, target, context)
     action = Action.INVITATION_SENT if is_invitation else Action.RECOVERY_LINK_SENT
     record(action, actor=actor, target=target, location=location)
+
+
+def two_factor_link(request, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    path = reverse("two_factor_link", args=[uid, two_factor_link_token.make_token(user)])
+    return request.build_absolute_uri(path)
+
+
+def send_two_factor_link(request, membership, *, actor=None):
+    """Plan, section 5: a role that requires 2FA, given to someone without a device, sends them
+    the link to set it up, so that the role does not lock them out when it starts.
+
+    An account that never set a password gets the invitation instead, whose flow already ends
+    in the 2FA step. Returns the action recorded, or None when there was nothing to send. Counts
+    towards the hourly limit (EmailLimitReached); SMTP errors propagate, as in send_password_link.
+    """
+    target = membership.user
+    if membership.role not in permissions.TWO_FACTOR_ROLES:
+        return None
+    if not permissions.enrols_two_factor_by_link(target):
+        return None
+    if not target.has_usable_password():
+        send_password_link(request, target, actor=actor, location=membership.location)
+        return Action.INVITATION_SENT
+    if account_emails_left(target) == 0:
+        raise EmailLimitReached
+    context = {
+        "user": target,
+        "membership": membership,
+        "link": two_factor_link(request, target),
+        "hours": settings.PASSWORD_RESET_TIMEOUT // 3600,
+        "grace_days": settings.PORTAL_TWO_FACTOR_GRACE_DAYS,
+    }
+    _send("two_factor_link", target, context)
+    record(Action.TWO_FACTOR_LINK_SENT, actor=actor, target=target, location=membership.location)
+    return Action.TWO_FACTOR_LINK_SENT
+
+
+def send_two_factor_notice(target):
+    """Tell the account's owner that 2FA was turned on, for when someone else did it with their
+    password (plan, section 5). An SMTP failure is logged and does not undo the 2FA.
+    """
+    try:
+        _send("two_factor_enabled", target, {"user": target})
+    except OSError:
+        logger.exception("Could not send the 2FA confirmation to user %s", target.pk)
+        return
+    record(Action.TWO_FACTOR_NOTICE_SENT, actor=target, target=target)
 
 
 @transaction.atomic
 def add_member(request, actor, location, *, email, full_name, role, subrole, start, end):
     """Give `email` a role in `location`, creating and inviting the account if it is new.
 
-    Returns (membership, created). An existing account only gets the membership, and the manager
-    of this location sees nothing of what the person does elsewhere (plan, section 4).
+    Returns (membership, created, sent). An existing account only gets the membership, and the
+    manager of this location sees nothing of what the person does elsewhere (plan, section 4).
+    `sent` is the email action recorded: the invitation, or the 2FA link for a role requiring it.
     """
     if not permissions.can_assign_role(actor, role, location):
         raise PermissionDenied
@@ -85,7 +141,10 @@ def add_member(request, actor, location, *, email, full_name, role, subrole, sta
     )
     if created:
         send_password_link(request, user, actor=actor, location=location)
-    return membership, created
+        sent = Action.INVITATION_SENT
+    else:
+        sent = send_two_factor_link(request, membership, actor=actor)
+    return membership, created, sent
 
 
 @transaction.atomic
