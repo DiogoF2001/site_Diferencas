@@ -22,9 +22,15 @@ FROM base AS prod
 COPY portal/requirements/ /tmp/requirements/
 RUN pip install --require-hashes -r /tmp/requirements/base.txt
 COPY portal/ /app/
-# Throwaway values: collectstatic only needs the settings module to load.
-RUN DJANGO_SECRET_KEY=build-only DB_NAME=build DB_USER=build DB_PASSWORD=build \
-    python manage.py collectstatic --noinput
+# Throwaway values: these commands only need the settings module to load. gettext is only needed
+# here, so it goes away in the same layer.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gettext \
+    && export DJANGO_SECRET_KEY=build-only DB_NAME=build DB_USER=build DB_PASSWORD=build \
+    && python manage.py compilemessages \
+    && python manage.py collectstatic --noinput \
+    && apt-get purge -y --auto-remove gettext \
+    && rm -rf /var/lib/apt/lists/*
 USER portal
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-tmp-dir", "/dev/shm", "--access-logfile", "-"]

@@ -18,6 +18,8 @@ x-portal-dev: &portal-dev
     DB_USER: portal
     DB_PASSWORD: dev-only-not-a-secret
     WORKER_INTERVAL_SECONDS: "5"
+    PORTAL_ADMIN_EMAIL: admin@example.test
+    PORTAL_ADMIN_PASSWORD: dev-only-not-a-secret
   volumes:
     - ../portal:/app
   depends_on:

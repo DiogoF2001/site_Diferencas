@@ -17,9 +17,11 @@ htmlcov/
 /portal/staticfiles/
 /portal/media/
 *.sqlite3
+*.mo
 
 # Backups e dados locais
 /deploy/backups/
+/deploy/.check-*/
 *.dump
 *.sql.gz
 

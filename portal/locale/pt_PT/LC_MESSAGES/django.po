@@ -1,0 +1,141 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Portal Diferenças\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-05 14:16+0000\n"
+"Language: pt_PT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Creates the admin account from the environment. Safe to run repeatedly."
+msgstr ""
+"Cria a conta de admin a partir das variáveis de ambiente. Pode ser corrido "
+"várias vezes."
+
+msgid "PORTAL_ADMIN_EMAIL and PORTAL_ADMIN_PASSWORD must be set."
+msgstr "É preciso definir PORTAL_ADMIN_EMAIL e PORTAL_ADMIN_PASSWORD."
+
+msgid "Another admin account already exists."
+msgstr "Já existe outra conta de admin."
+
+msgid "Admin account created."
+msgstr "Conta de admin criada."
+
+msgid "This email address belongs to an account that is not the admin."
+msgstr "Este endereço de e-mail pertence a uma conta que não é a de admin."
+
+msgid "The admin account already exists; nothing to create."
+msgstr "A conta de admin já existe; não há nada a criar."
+
+msgid "email address"
+msgstr "endereço de e-mail"
+
+msgid "full name"
+msgstr "nome completo"
+
+msgid "active"
+msgstr "ativo"
+
+msgid "date joined"
+msgstr "data de criação"
+
+msgid "user"
+msgstr "utilizador"
+
+msgid "users"
+msgstr "utilizadores"
+
+msgid "The email address must be in lowercase."
+msgstr "O endereço de e-mail tem de estar em minúsculas."
+
+msgid "name"
+msgstr "nome"
+
+msgid "address"
+msgstr "morada"
+
+msgid "location"
+msgstr "polo"
+
+msgid "locations"
+msgstr "polos"
+
+msgid "The end date cannot be before the start date."
+msgstr "A data de fim não pode ser anterior à data de início."
+
+msgid "start date"
+msgstr "data de início"
+
+msgid "end date"
+msgstr "data de fim"
+
+msgid "Professional"
+msgstr "Profissional"
+
+msgid "Secretariat"
+msgstr "Secretariado"
+
+msgid "Coordination / Technical direction"
+msgstr "Coordenação / Direção técnica"
+
+msgid "Resident"
+msgstr "Residente"
+
+msgid "Intern"
+msgstr "Estagiária"
+
+msgid "role"
+msgstr "papel"
+
+msgid "subrole"
+msgstr "subpapel"
+
+msgid "membership"
+msgstr "filiação"
+
+msgid "memberships"
+msgstr "filiações"
+
+msgid "A professional needs a subrole, and the other roles cannot have one."
+msgstr ""
+"Quem é Profissional precisa de um subpapel, e os outros papéis não podem ter "
+"nenhum."
+
+msgid "An intern's membership needs an end date."
+msgstr "A filiação de uma estagiária precisa de data de fim."
+
+msgid "This person already has this role in this location on these dates."
+msgstr "Esta pessoa já tem este papel neste polo nestas datas."
+
+msgid "The admin account cannot have memberships."
+msgstr "A conta de admin não pode ter filiações."
+
+msgid "mentor"
+msgstr "orientadora"
+
+msgid "mentee"
+msgstr "orientanda"
+
+msgid "mentorship"
+msgstr "orientação"
+
+msgid "mentorships"
+msgstr "orientações"
+
+msgid "A person cannot mentor themselves."
+msgstr "Uma pessoa não pode orientar-se a si própria."
+
+msgid "This mentorship already exists in this location on these dates."
+msgstr "Esta orientação já existe neste polo nestas datas."
+
+msgid ""
+"The mentor needs a professional membership in this location on these dates."
+msgstr ""
+"A orientadora precisa de uma filiação como Profissional neste polo nestas "
+"datas."
+
+msgid "The mentee needs an intern membership in this location on these dates."
+msgstr ""
+"A orientanda precisa de uma filiação como Estagiária neste polo nestas datas."
