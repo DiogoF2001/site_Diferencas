@@ -131,7 +131,19 @@ def test_staff_role_for_a_deactivated_account_sends_nothing(
     assert mailoutbox == []
 
 
-def test_the_2fa_link_counts_towards_the_hourly_limit(client, location, coordination, mailoutbox):
+WARNING = "Não foi possível enviar o link do 2FA. Volte a enviá-lo mais tarde."
+
+
+def fail_smtp(monkeypatch):
+    def fail(*args, **kwargs):
+        raise smtplib.SMTPException("down")
+
+    monkeypatch.setattr("core.accounts.send_mail", fail)
+
+
+def test_limit_reached_still_gives_the_role_and_audits_it(
+    client, location, coordination, mailoutbox
+):
     person = person_with_password(location)
     for _sent in range(3):
         accounts.send_password_link(_request(), person)
@@ -139,9 +151,95 @@ def test_the_2fa_link_counts_towards_the_hourly_limit(client, location, coordina
 
     response = add(client, location, person.email)
 
+    assert response.status_code == 302
+    assert person.memberships.filter(role=Role.SECRETARIAT).exists()
+    assert mailoutbox == []
+    event = AuditEvent.objects.get(action=Action.TWO_FACTOR_LINK_FAILED)
+    assert (event.actor, event.target, event.location) == (coordination, person, location)
+    assert event.details == {"reason": "limit"}
+    page = client.get(response.url).content.decode()
+    assert WARNING in page
+    assert "Enviar link do 2FA" in page
+
+
+def test_smtp_error_still_gives_the_role_and_audits_it(client, location, coordination, monkeypatch):
+    person = person_with_password(location)
+    fail_smtp(monkeypatch)
+
+    response = add(client, location, person.email)
+
+    assert response.status_code == 302
+    assert person.memberships.filter(role=Role.SECRETARIAT).exists()
+    event = AuditEvent.objects.get(action=Action.TWO_FACTOR_LINK_FAILED)
+    assert event.details == {"reason": "smtp"}
+    assert not AuditEvent.objects.filter(action=Action.TWO_FACTOR_LINK_SENT).exists()
+    assert WARNING in client.get(response.url).content.decode()
+
+
+def test_smtp_error_resending_an_invitation_also_keeps_the_role(
+    client, location, other_location, coordination, monkeypatch
+):
+    person = make_account("convidada")
+    make_member(person, other_location, Role.PROFESSIONAL)
+    fail_smtp(monkeypatch)
+
+    assert add(client, location, person.email).status_code == 302
+    assert person.memberships.filter(location=location).exists()
+    assert AuditEvent.objects.filter(action=Action.TWO_FACTOR_LINK_FAILED).exists()
+
+
+def test_new_account_invitation_failure_still_leaves_nothing(
+    client, location, coordination, monkeypatch
+):
+    fail_smtp(monkeypatch)
+
+    response = add(client, location, "nova@example.test")
+
     assert response.status_code == 200
-    assert "demasiados e-mails" in response.content.decode()
-    assert not person.memberships.filter(role=Role.SECRETARIAT).exists()
+    assert not User.objects.filter(email="nova@example.test").exists()
+    assert not AuditEvent.objects.filter(action=Action.TWO_FACTOR_LINK_FAILED).exists()
+
+
+def test_send_link_button_sends_the_2fa_link_after_a_failure(
+    client, location, coordination, monkeypatch, mailoutbox
+):
+    person = person_with_password(location)
+    with monkeypatch.context() as patch:
+        fail_smtp(patch)
+        add(client, location, person.email)
+
+    client.post(reverse("account_send_link", args=[location.pk, person.pk]))
+
+    assert len(mailoutbox) == 1
+    assert "/conta/2fa/link/" in mailoutbox[0].body
+    assert AuditEvent.objects.filter(action=Action.TWO_FACTOR_LINK_SENT, target=person).exists()
+    assert person.has_usable_password()
+
+
+def test_send_link_button_sends_a_password_link_when_no_2fa_is_due(
+    client, location, coordination, mailoutbox
+):
+    person = person_with_password(location)
+
+    page = client.get(reverse("member_list", args=[location.pk])).content.decode()
+    client.post(reverse("account_send_link", args=[location.pk, person.pk]))
+
+    assert "Enviar link do 2FA" not in page
+    assert "/conta/definir/" in mailoutbox[0].body
+
+
+def test_secretariat_of_another_location_cannot_send_the_2fa_link(
+    client, location, other_location, monkeypatch, mailoutbox
+):
+    person = person_with_password(location)
+    staff_role(person, location, start=3)
+    other = make_account("secretariado-b")
+    make_member(other, other_location, Role.SECRETARIAT)
+    login_verified(client, other)
+
+    response = client.post(reverse("account_send_link", args=[other_location.pk, person.pk]))
+
+    assert response.status_code == 404
     assert mailoutbox == []
 
 
@@ -153,20 +251,6 @@ def test_2fa_links_use_up_the_limit_for_recovery_links(location, mailoutbox):
 
     with pytest.raises(accounts.EmailLimitReached):
         accounts.send_password_link(_request(), person)
-
-
-def test_smtp_failure_leaves_no_role_behind(client, location, coordination, monkeypatch):
-    person = person_with_password(location)
-
-    def fail(*args, **kwargs):
-        raise smtplib.SMTPException("down")
-
-    monkeypatch.setattr("core.accounts.send_mail", fail)
-
-    response = add(client, location, person.email)
-
-    assert response.status_code == 200
-    assert not person.memberships.filter(role=Role.SECRETARIAT).exists()
 
 
 def test_backoffice_sends_the_link_when_creating_a_staff_role(
@@ -189,6 +273,31 @@ def test_backoffice_sends_the_link_when_creating_a_staff_role(
     assert len(mailoutbox) == 1
     event = AuditEvent.objects.get(action=Action.TWO_FACTOR_LINK_SENT)
     assert event.actor == admin_user
+
+
+def test_backoffice_keeps_the_role_and_warns_when_the_link_fails(
+    client, admin_user, location, monkeypatch
+):
+    person = person_with_password(location)
+    login_verified(client, admin_user)
+    fail_smtp(monkeypatch)
+
+    response = client.post(
+        reverse("admin:core_membership_add"),
+        {
+            "user": person.pk,
+            "location": location.pk,
+            "role": Role.SECRETARIAT,
+            "subrole": "",
+            "start_date": today().isoformat(),
+        },
+        follow=True,
+    )
+
+    assert person.memberships.filter(role=Role.SECRETARIAT).exists()
+    assert WARNING in response.content.decode()
+    event = AuditEvent.objects.get(action=Action.TWO_FACTOR_LINK_FAILED)
+    assert (event.actor, event.details) == (admin_user, {"reason": "smtp"})
 
 
 def test_backoffice_sends_the_link_only_when_the_role_changes(
@@ -453,15 +562,14 @@ def test_a_failed_confirmation_email_does_not_undo_2fa(client, location, monkeyp
     client.get(reverse("two_factor_setup"))
     device = TOTPDevice.objects.get(user=person)
 
-    def fail(*args, **kwargs):
-        raise smtplib.SMTPException("down")
-
-    monkeypatch.setattr("core.accounts.send_mail", fail)
+    fail_smtp(monkeypatch)
     client.post(reverse("two_factor_setup"), {"token": current_code(device)})
 
     device.refresh_from_db()
     assert device.confirmed
     assert not AuditEvent.objects.filter(action=Action.TWO_FACTOR_NOTICE_SENT).exists()
+    event = AuditEvent.objects.get(action=Action.TWO_FACTOR_NOTICE_FAILED)
+    assert (event.actor, event.target, event.details) == (person, person, {"reason": "smtp"})
 
 
 # 3. The admin is unchanged

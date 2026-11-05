@@ -28,7 +28,7 @@
     {% if messages %}
       <ul class="messages">
         {% for message in messages %}
-          <li class="alert {% if message.level_tag == 'error' %}alert-error{% else %}alert-ok{% endif %}" role="status">{{ message }}</li>
+          <li class="alert {% if message.level_tag == 'error' or message.level_tag == 'warning' %}alert-error{% else %}alert-ok{% endif %}" role="status">{{ message }}</li>
         {% endfor %}
       </ul>
     {% endif %}

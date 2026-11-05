@@ -55,6 +55,7 @@ def member_list(request, location_id):
             "can_remove": permissions.can_remove_from_location(actor, user, location),
             "can_manage_account": permissions.can_manage_account(actor, user),
             "can_send_link": permissions.can_send_recovery_link(actor, user, location),
+            "sends_two_factor_link": accounts.needs_two_factor_link(user),
         }
         for user, memberships in people.items()
     ]
@@ -95,6 +96,12 @@ def member_add(request, location_id):
         else:
             if created:
                 messages.success(request, _("Account created. The invitation was sent by email."))
+            elif sent == AuditEvent.Action.TWO_FACTOR_LINK_FAILED:
+                messages.success(
+                    request,
+                    _("This email already had an account. The membership was added."),
+                )
+                messages.warning(request, accounts.LINK_FAILED_MESSAGE)
             elif sent == AuditEvent.Action.TWO_FACTOR_LINK_SENT:
                 messages.success(
                     request,

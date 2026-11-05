@@ -47,6 +47,11 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 - **Tolerância de 7 dias** (configurável) a partir do início do papel, para quem já entrou antes (`last_login` preenchido): entra com a palavra-passe, mas só acede ao ecrã de configuração do 2FA. Ao concluir, recebe um e-mail de confirmação, que fica no `AuditEvent`. Depois, precisa de um link novo.
 - **Contas que nunca entraram:** só o link. O Admin fica como estava.
 
+**Decididas pelo utilizador no último ajuste do PR #6:**
+
+- **Atribuir um papel nunca falha por causa do link do 2FA.** Com o limite atingido ou o SMTP em erro, a filiação é criada na mesma, a falha fica no `AuditEvent` (`two_factor_link_failed`, com o motivo `limit` ou `smtp`) e quem atribuiu vê "Não foi possível enviar o link do 2FA. Volte a enviá-lo mais tarde.", com o botão para enviar o link. O convite de uma conta nova mantém a regra: sem e-mail, não fica conta.
+- **Falha do e-mail de confirmação do 2FA:** fica no `AuditEvent` (`two_factor_notice_failed`), além dos logs.
+
 **Interpretações e valores escolhidos por mim, a confirmar na revisão:**
 
 | Regra implementada | Base |
@@ -65,10 +70,11 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 | O link de configuração do 2FA pede a palavra-passe atual, e os erros contam como logins falhados (com o mesmo bloqueio). Depois segue para o mesmo passo `/conta/2fa/ativar/` do convite | O link prova o e-mail; a palavra-passe impede que quem só tenha acesso ao e-mail configure o 2FA no lugar da pessoa. Quem não se lembrar da palavra-passe pede um link de recuperação, que também configura o 2FA |
 | O link de configuração do 2FA vale 48 h, como os outros, e não deixa de valer quando a pessoa entra noutro papel entretanto (ao contrário do link da palavra-passe). Acaba com uma palavra-passe nova, com a conta desativada, quando o papel deixa de existir ou quando já há dispositivo | Quem acumula papéis entra no portal com frequência; se cada login anulasse o link, este quase nunca funcionaria |
 | A uma conta existente que nunca definiu a palavra-passe, o novo papel reenvia o convite em vez do link do 2FA | O convite já termina no passo do 2FA |
-| Se o envio do link falhar (limite ou SMTP), a filiação não é criada e o formulário explica porquê. No backoffice, a filiação fica guardada e aparece um aviso | Igual ao convite no portal. No backoffice o Admin pode reenviar depois |
+| No membro com um papel de staff por configurar e com palavra-passe, o botão da lista de membros passa a "Enviar link do 2FA" e envia esse link, em vez do link da palavra-passe. Sem 2FA pendente, continua a enviar o convite ou a recuperação | Último ajuste: o botão serve para reenviar o link que falhou, sem obrigar a pessoa a mudar a palavra-passe |
+| Também não falha o reenvio do convite a uma conta existente que nunca definiu a palavra-passe, quando ganha um papel de staff (fica `two_factor_link_failed`) | É o envio que acompanha o papel, não a criação de uma conta nova |
 | O backoffice envia o link ao criar uma filiação de staff ou ao mudar o papel para staff; guardar sem mudar o papel não envia nada | Evita reenvios a cada gravação |
 | A tolerância conta do início da filiação de staff ativa mais antiga: com início no dia D, entra nos dias D a D+6 e é recusado a partir de D+7 (o "dia 8") | "7 dias a partir do início do papel" |
-| O e-mail de confirmação vai sempre que alguém, exceto o Admin, ativa o 2FA com a sessão iniciada (tolerância, papel futuro ou profissional que o queira). Não vai no passo do link, onde a pessoa já provou o acesso ao e-mail. Se o SMTP falhar, o 2FA fica ativo e o erro vai para os logs | O objetivo é avisar quando só foi usada a palavra-passe. Um servidor de e-mail em baixo não deve impedir ninguém de ativar o 2FA |
+| O e-mail de confirmação vai sempre que alguém, exceto o Admin, ativa o 2FA com a sessão iniciada (tolerância, papel futuro ou profissional que o queira). Não vai no passo do link, onde a pessoa já provou o acesso ao e-mail. Se o SMTP falhar, o 2FA fica ativo, o erro vai para os logs e fica `two_factor_notice_failed` no `AuditEvent` | O objetivo é avisar quando só foi usada a palavra-passe. Um servidor de e-mail em baixo não deve impedir ninguém de ativar o 2FA |
 | O aviso do papel futuro aparece em todas as páginas a quem tem sessão iniciada, papel de staff futuro e nenhum dispositivo, com uma ligação para `/conta/2fa/configurar/` | "Até à data de início do papel, mostra no portal um aviso" |
 | As ações feitas pelo Admin no backoffice (ativar/desativar contas, criar/alterar/apagar filiações) também ficam no `AuditEvent` | Plano, secção 11 |
 
@@ -92,7 +98,7 @@ Pôr pessoas a entrar no portal com segurança e dar ao secretariado e à coorde
 **Alterados**
 - `portal/core/models.py`: `AuditEvent` e as bases só de acrescentar.
 - `portal/core/permissions.py`: `has_portal_access`, `requires_two_factor`, `lacks_required_two_factor`, `enrols_two_factor_by_link`, `two_factor_grace_ends`, `may_log_in_without_two_factor`, `upcoming_two_factor_roles`, `members_of`, `can_send_recovery_link`.
-- Ajuste da acumulação de papéis: `core/context_processors.py`, `core/migrations/0003_audit_two_factor_emails.py` (só as novas escolhas de ação, sem SQL), os templates `two_factor_link.html` e `email/two_factor_link_*` e `email/two_factor_enabled_*`, e `tests/test_two_factor_roles.py`. `PORTAL_TWO_FACTOR_GRACE_DAYS` foi acrescentada às definições, ao `docker-compose.yml` e ao `.env.example`.
+- Ajuste da acumulação de papéis: `core/context_processors.py`, `core/migrations/0003_audit_two_factor_emails.py` (só as novas escolhas de ação, incluindo as falhas do último ajuste, sem SQL; foi regenerada porque o PR ainda não está na `main`), os templates `two_factor_link.html` e `email/two_factor_link_*` e `email/two_factor_enabled_*`, e `tests/test_two_factor_roles.py`. `PORTAL_TWO_FACTOR_GRACE_DAYS` foi acrescentada às definições, ao `docker-compose.yml` e ao `.env.example`.
 - `portal/core/admin.py`: backoffice só com 2FA, auditoria das alterações, `AuditEvent` só de leitura, sem o admin dos dispositivos TOTP (mostraria os segredos).
 - `portal/config/settings.py`, `portal/config/urls.py`, `portal/core/urls.py`, `portal/core/apps.py`.
 - `portal/requirements/` (`base.in`, `base.txt`, `dev.txt`).
@@ -128,7 +134,7 @@ Corridos no Docker, a partir da raiz do repositório:
 
 | Comando | Resultado |
 |---|---|
-| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 572 passaram (425 antes desta tarefa; 513 na primeira versão do PR, 537 depois da revisão) |
+| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 578 passaram (425 antes desta tarefa; 513 na primeira versão do PR, 537 depois da revisão, 572 depois da acumulação de papéis) |
 | `... run --rm --no-deps app ruff check .` | sem erros |
 | `... run --rm --no-deps app ruff format --check .` | sem alterações |
 | `... run --rm app python manage.py makemigrations --check --dry-run` | sem migrações em falta |

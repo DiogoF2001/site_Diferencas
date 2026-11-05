@@ -79,20 +79,12 @@ class MembershipAdmin(admin.ModelAdmin):
             self._send_two_factor_link(request, obj)
 
     def _send_two_factor_link(self, request, membership):
-        """As in the portal; here a failed email only warns, since the change is already saved."""
-        try:
-            sent = accounts.send_two_factor_link(request, membership, actor=request.user)
-        except accounts.EmailLimitReached:
-            self.message_user(
-                request, _("Too many emails to this address in the last hour."), messages.WARNING
-            )
-        except OSError:
-            self.message_user(
-                request, _("The email could not be sent. Please try again."), messages.WARNING
-            )
-        else:
-            if sent:
-                self.message_user(request, _("The link to set up 2FA was sent by email."))
+        """As in the portal: the role stands, and a failed email is audited and warned about."""
+        sent = accounts.offer_two_factor_link(request, membership, actor=request.user)
+        if sent == Action.TWO_FACTOR_LINK_FAILED:
+            self.message_user(request, accounts.LINK_FAILED_MESSAGE, messages.WARNING)
+        elif sent:
+            self.message_user(request, _("The link to set up 2FA was sent by email."))
 
     def delete_model(self, request, obj):
         before = membership_snapshot(obj)

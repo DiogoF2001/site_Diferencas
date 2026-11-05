@@ -29,7 +29,7 @@
             <td>
               <div class="actions">
                 {% if row.can_send_link %}
-                  <form method="post" action="{% url 'account_send_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% translate "Send password link" %}</button></form>
+                  <form method="post" action="{% url 'account_send_link' location.pk row.user.pk %}">{% csrf_token %}<button class="btn btn-small" type="submit">{% if row.sends_two_factor_link %}{% translate "Send 2FA link" %}{% else %}{% translate "Send password link" %}{% endif %}</button></form>
                 {% endif %}
                 {% if row.can_manage_account %}
                   {% if row.has_two_factor %}

@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from django.utils.translation import gettext_lazy
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from core import permissions
@@ -24,6 +25,8 @@ from core.models import Membership, User
 from core.tokens import password_link_token, two_factor_link_token
 
 logger = logging.getLogger(__name__)
+
+LINK_FAILED_MESSAGE = gettext_lazy("Could not send the 2FA link. Send it again later.")
 
 
 class EmailLimitReached(Exception):
@@ -98,14 +101,36 @@ def send_two_factor_link(request, membership, *, actor=None):
     return Action.TWO_FACTOR_LINK_SENT
 
 
+def offer_two_factor_link(request, membership, *, actor=None):
+    """send_two_factor_link for a role just given: the role stands even if the email fails.
+
+    Plan, section 5: a failure (hourly limit or SMTP) is recorded and the caller warns whoever
+    gave the role, who can send the link again from the members page.
+    """
+    try:
+        return send_two_factor_link(request, membership, actor=actor)
+    except (EmailLimitReached, OSError) as error:
+        reason = "limit" if isinstance(error, EmailLimitReached) else "smtp"
+        logger.warning("2FA link to user %s not sent: %s", membership.user_id, reason)
+        record(
+            Action.TWO_FACTOR_LINK_FAILED,
+            actor=actor,
+            target=membership.user,
+            location=membership.location,
+            reason=reason,
+        )
+        return Action.TWO_FACTOR_LINK_FAILED
+
+
 def send_two_factor_notice(target):
     """Tell the account's owner that 2FA was turned on, for when someone else did it with their
-    password (plan, section 5). An SMTP failure is logged and does not undo the 2FA.
+    password (plan, section 5). An SMTP failure is logged and audited, and does not undo the 2FA.
     """
     try:
         _send("two_factor_enabled", target, {"user": target})
     except OSError:
         logger.exception("Could not send the 2FA confirmation to user %s", target.pk)
+        record(Action.TWO_FACTOR_NOTICE_FAILED, actor=target, target=target, reason="smtp")
         return
     record(Action.TWO_FACTOR_NOTICE_SENT, actor=target, target=target)
 
@@ -116,7 +141,8 @@ def add_member(request, actor, location, *, email, full_name, role, subrole, sta
 
     Returns (membership, created, sent). An existing account only gets the membership, and the
     manager of this location sees nothing of what the person does elsewhere (plan, section 4).
-    `sent` is the email action recorded: the invitation, or the 2FA link for a role requiring it.
+    `sent` is the email action recorded: the invitation, or the 2FA link for a role requiring it,
+    or its failure. Only the invitation of a new account undoes everything when it fails.
     """
     if not permissions.can_assign_role(actor, role, location):
         raise PermissionDenied
@@ -143,7 +169,7 @@ def add_member(request, actor, location, *, email, full_name, role, subrole, sta
         send_password_link(request, user, actor=actor, location=location)
         sent = Action.INVITATION_SENT
     else:
-        sent = send_two_factor_link(request, membership, actor=actor)
+        sent = offer_two_factor_link(request, membership, actor=actor)
     return membership, created, sent
 
 
@@ -218,7 +244,32 @@ def reset_two_factor_from_server(target):
 
 
 def send_recovery_link(request, actor, target, location):
+    """The members page's "Send link": the 2FA link to someone with a password who still has to
+    set 2FA up for a staff role, otherwise the invitation or recovery link.
+    """
     if not permissions.can_send_recovery_link(actor, target, location):
         raise PermissionDenied
     with transaction.atomic():
-        send_password_link(request, target, actor=actor, location=location)
+        membership = _two_factor_membership(target, location)
+        if membership is not None:
+            send_two_factor_link(request, membership, actor=actor)
+        else:
+            send_password_link(request, target, actor=actor, location=location)
+
+
+def _two_factor_membership(target, location):
+    """The staff role, here if there is one, that a 2FA link would be about; None if none is due."""
+    if not target.has_usable_password() or not permissions.enrols_two_factor_by_link(target):
+        return None
+    memberships = (
+        Membership.objects.filter(user=target, role__in=permissions.TWO_FACTOR_ROLES)
+        .overlapping(timezone.localdate())
+        .select_related("location")
+    )
+    return (
+        memberships.filter(location=location).first() or memberships.order_by("start_date").first()
+    )
+
+
+def needs_two_factor_link(target):
+    return _two_factor_membership(target, None) is not None
