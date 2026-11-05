@@ -84,13 +84,15 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 
 **Polo inativo:** enquanto um polo estiver inativo, as filiações nesse polo não dão nenhuma permissão. O Admin mantém o acesso, para o poder gerir e reativar. As filiações não mudam, por isso reativar o polo repõe tudo.
 
+**Marcação direta e titular:** o secretariado e a coordenação, com a permissão de marcar diretamente, podem marcar com qualquer membro ativo do polo como titular. Isto usa a permissão deles, não o mecanismo "em nome de outra pessoa" do Admin, que continua a ser só do Admin.
+
 ### Regras de gestão de contas
 
 - **Acesso a um polo:** uma pessoa só tem acesso a um polo depois de o secretariado ou a coordenação *desse* polo lhe criar uma filiação lá.
 - **Até que papel se pode atribuir:** cada pessoa só atribui papéis até ao seu próprio nível no polo. O secretariado pode criar uma conta de secretariado do início ao fim, sem precisar do admin.
 - **E-mail já registado:** cria-se apenas a nova filiação. Quem gere o polo B não vê as reservas nem a atividade dessa pessoa noutros polos.
 - **Palavras-passe:** ninguém define a palavra-passe de outra pessoa. Só se pode enviar um link de recuperação para o e-mail dela.
-- **Ações sobre a conta inteira:** desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em *todos* os polos onde ela está. Caso contrário, só se pode removê-la do próprio polo.
+- **Ações sobre a conta inteira:** desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em *todos* os polos onde ela tem uma filiação ativa ou futura; as filiações terminadas não contam. Caso contrário, só se pode removê-la do próprio polo.
 - **Listagem da coordenação:** a coordenação tem uma lista dos profissionais do seu polo, com os papéis de cada um nesse polo. Opcionalmente, mostra também os papéis e polos de cada pessoa noutros polos, mas nunca a atividade lá. A lista pode ser exportada em CSV.
 
 ### Orientação
@@ -103,6 +105,7 @@ A área técnica inclui os logs técnicos, o estado do sistema, a configuração
 - **Admin "hardcoded":** a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.
 - **2FA:** obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.
 - **Saída de pessoas:** as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa.
+- **Links de recuperação:** pode enviar um link de recuperação quem tiver a permissão de gerir membros num polo onde a pessoa tenha uma filiação ativa ou futura. O envio tem um limite e fica na auditoria de contas.
 - **E-mail:** usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.
 
 ## 6. Módulo de salas
@@ -203,10 +206,12 @@ Estes são os parâmetros de funcionamento das reservas. **Todos os valores são
 
 Os registos são só de acrescentar. A aplicação não os edita nem apaga, e o utilizador da base de dados com que ela trabalha não tem permissão para alterar nem apagar nessas tabelas.
 
+No histórico das reservas, o "em nome de" fica registado sempre que o titular é diferente de quem faz a ação, seja o Admin, o secretariado ou a coordenação.
+
 | Registo                             | Conteúdo                                                                                                                                                                                                       | Quem vê                                                                       |
 |-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | Histórico de cada pedido ou reserva | Cada evento (criação, edição, aprovação, recusa, mudança de sala ou hora, participantes, divisão de horas, cancelamento), com data e hora, utilizador, "em nome de" quando aplicável, e o valor antes e depois | O titular e os participantes; o secretariado e a coordenação do polo; o admin |
-| Auditoria de contas                 | Convites, filiações, papéis, orientações, desativações, reposições de 2FA e logins falhados                                                                                                                    | A coordenação (membros do seu polo) e o admin                                 |
+| Auditoria de contas                 | Convites, filiações, papéis, orientações, desativações, reposições de 2FA, envios de links de recuperação e logins falhados                                                                                                                    | A coordenação (membros do seu polo) e o admin                                 |
 | Logs técnicos                       | Erros, desempenho e tarefas agendadas                                                                                                                                                                          | Só o admin                                                                    |
 
 As datas e horas são guardadas em UTC e mostradas na hora de Lisboa.

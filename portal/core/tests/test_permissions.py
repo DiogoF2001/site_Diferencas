@@ -430,15 +430,69 @@ def test_account_action_ignores_the_targets_expired_memberships(polo_a, polo_b):
     assert can_manage_account(actor, target) is True
 
 
-def test_account_action_ignores_the_targets_memberships_yet_to_start(polo_a, polo_b):
+def test_account_action_denied_if_the_target_will_be_in_a_location_the_actor_is_not(polo_a, polo_b):
     actor = member("gestora", polo_a, Role.SECRETARIAT)
+    target = member("alvo", polo_a, Role.PROFESSIONAL)
+    make_member(target, polo_b, Role.COORDINATION, start=1, end=30)
+
+    assert can_manage_account(actor, target) is False
+
+
+def test_account_action_denied_if_the_target_will_outrank_the_actor_in_the_location(polo_a):
+    actor = member("gestora", polo_a, Role.SECRETARIAT)
+    target = member("alvo", polo_a, Role.PROFESSIONAL)
+    make_member(target, polo_a, Role.COORDINATION, start=5, end=30)
+
+    assert can_manage_account(actor, target) is False
+
+
+def test_account_action_allowed_with_the_level_for_the_targets_future_role(polo_a, polo_b):
+    actor = member("gestora", polo_a, Role.SECRETARIAT)
+    make_member(actor, polo_b, Role.COORDINATION)
     target = member("alvo", polo_a, Role.PROFESSIONAL)
     make_member(target, polo_b, Role.COORDINATION, start=5, end=30)
 
     assert can_manage_account(actor, target) is True
 
 
-def test_target_with_no_active_membership_is_only_for_the_admin(polo_a):
+def test_account_that_has_not_started_can_be_managed_up_to_the_actors_level(polo_a):
+    actor = member("gestora", polo_a, Role.SECRETARIAT)
+    created = member("nova", polo_a, Role.SECRETARIAT, start=5, end=30)
+    above = member("acima", polo_a, Role.COORDINATION, start=5, end=30)
+
+    assert can_manage_account(actor, created) is True
+    assert can_manage_account(actor, above) is False
+
+
+def test_account_that_has_not_started_elsewhere_cannot_be_managed_from_here(polo_a, polo_b):
+    actor = member("gestora", polo_a, Role.COORDINATION)
+    target = member("alvo", polo_b, Role.PROFESSIONAL, start=5, end=30)
+
+    assert can_manage_account(actor, target) is False
+
+
+def test_actors_own_future_role_does_not_count(polo_a):
+    actor = member("gestora", polo_a, Role.COORDINATION, start=5, end=30)
+    target = member("alvo", polo_a, Role.PROFESSIONAL)
+
+    assert can_manage_account(actor, target) is False
+
+
+def test_target_with_a_future_membership_in_an_inactive_location_is_only_for_the_admin(
+    polo_a, polo_b
+):
+    actor = member("gestora", polo_a, Role.COORDINATION)
+    make_member(actor, polo_b, Role.COORDINATION)
+    target = member("alvo", polo_a, Role.PROFESSIONAL)
+    make_member(target, polo_b, Role.PROFESSIONAL, start=5, end=30)
+    polo_b.is_active = False
+    polo_b.save()
+
+    assert can_manage_account(actor, target) is False
+    assert can_manage_account(make_account("admin", is_superuser=True), target) is True
+
+
+def test_target_whose_memberships_have_all_ended_is_only_for_the_admin(polo_a):
     actor = member("gestora", polo_a, Role.COORDINATION)
     target = member("alvo", polo_a, Role.PROFESSIONAL, start=-30, end=-1)
 

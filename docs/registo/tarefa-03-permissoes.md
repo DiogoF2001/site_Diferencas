@@ -24,9 +24,15 @@ Sem dependências novas nem migrações.
 
 - **Polo inativo:** as filiações nesse polo não dão nenhuma permissão. O Admin mantém o acesso, para o poder gerir e reativar. Reativar o polo repõe tudo.
 
+**Tomadas pelo utilizador na revisão do PR, e registadas no plano:**
+
+- **Ações sobre a conta inteira (secção 4):** contam as filiações ativas e futuras do alvo; só as terminadas ficam de fora. Assim, o secretariado do polo A não desativa quem vai ser coordenação no polo B, e consegue gerir uma conta que criou e que ainda não começou. Isto substitui, só para o alvo, a regra "só contam as filiações ativas". O nível e as permissões de quem age continuam a contar só com as filiações ativas.
+- **Marcação direta (secções 4 e 11):** o secretariado e a coordenação, com `salas.book_directly`, marcam com qualquer membro ativo do polo como titular. O `BookingEvent` guarda "em nome de" sempre que o titular é diferente de quem faz a ação. `on_behalf_of` no motor continua só para o Admin. A implementar na tarefa 6.
+- **Links de recuperação (secção 5):** pode enviar quem tiver `core.manage_members` num polo onde o alvo tenha uma filiação ativa ou futura. O envio tem limite e fica no `AuditEvent`. A implementar na tarefa 4.
+
 **Dadas pelo utilizador no pedido da tarefa:** hierarquia `professional < secretariat < coordination`; só contam as filiações ativas na data de Lisboa; o Admin age "em nome de outra pessoa".
 
-**Interpretações do plano e do protótipo.** O plano não as escreve palavra por palavra. Todas recusam em caso de dúvida. **A confirmar na revisão do PR:**
+**Interpretações do plano e do protótipo.** O plano não as escreve palavra por palavra. Todas recusam em caso de dúvida. O utilizador reviu esta tabela no PR e só pediu a alteração da regra das filiações futuras:
 
 | Regra implementada | Base |
 |---|---|
@@ -35,13 +41,11 @@ Sem dependências novas nem migrações.
 | O Profissional não atribui papéis nem atua sobre contas, apesar de ter um nível | Tabela da secção 4 ("–") e protótipo |
 | Remover alguém de um polo exige um nível ≥ ao mais alto que essa pessoa tem nesse polo, contando os papéis que ainda vão começar | Protótipo (`canManageMember`). Contar os futuros é acrescento: de outro modo, o secretariado podia remover uma coordenação que começa na próxima semana |
 | Ninguém desativa a própria conta nem repõe o próprio 2FA, incluindo o Admin | Protótipo (`canActOnAccount`). O plano fala em "essa pessoa". Uma sessão roubada não pode retirar o 2FA |
-| Uma pessoa sem filiações ativas só pode ser gerida pelo Admin | Protótipo. Evita que "todos os polos" seja verdade quando não há nenhum |
-| Uma pessoa com filiação ativa num polo inativo só pode ser gerida pelo Admin | Consequência da decisão do polo inativo |
+| Uma pessoa cujas filiações já terminaram todas só pode ser gerida pelo Admin | Protótipo. Evita que "todos os polos" seja verdade quando não há nenhum |
+| Uma pessoa com filiação ativa ou futura num polo inativo só pode ser gerida pelo Admin | Consequência da decisão do polo inativo |
 | A orientação só conta com a relação, a filiação de profissional da orientadora e a filiação de estagiária da orientanda ativas, e com as duas contas ativas | Plano, secção 4, mais "só contam as filiações ativas". A orientadora perde a visão quando o estágio termina, mesmo que a relação continue aberta |
 | A coordenação e o Admin veem as horas de quem já saiu do polo; o secretariado vê os horários, mas só as suas próprias horas | Plano, secções 4 e 8 (a coordenação vê "as de todo o polo"; "cada pessoa vê as suas horas") |
 | Só o Admin liga a libertação de salas (`salas.enable_room_release`) | Plano, secções 6 e 10 |
-
-**Consequência a ter em conta:** como só contam as filiações ativas, uma filiação futura noutro polo não bloqueia as ações sobre a conta inteira. O secretariado do polo A pode desativar uma pessoa que começa como coordenação no polo B na próxima semana. Segue a regra pedida; se não for o desejado, muda numa linha.
 
 ## Ficheiros criados ou alterados
 
@@ -58,7 +62,7 @@ Sem dependências novas nem migrações.
 - `portal/pyproject.toml`: acrescenta `salas` aos caminhos do `pytest`.
 - `portal/core/tests/helpers.py`: funções para criar contas, filiações e orientações nos testes.
 - `CLAUDE.md`: nova "Forma de trabalhar".
-- `docs/plano.md`, `docs/plano.html`: polo inativo.
+- `docs/plano.md`, `docs/plano.html`: polo inativo, filiações futuras nas ações sobre a conta inteira, titular da marcação direta, "em nome de" no histórico e links de recuperação.
 - `docs/roadmap.md`: tarefa 3 concluída.
 
 ## Como funciona
@@ -78,7 +82,7 @@ Uma linha de `Membership` numa conta de admin é ignorada: o `clean()` já a rec
 
 **Teto de papéis.** `can_assign_role(actor, role, location)` exige `core.manage_members` no polo e que o nível do papel não passe o nível de quem atribui nesse polo: o mais alto dos seus papéis ativos, com `professional=1`, `secretariat=2`, `coordination=3`. `can_remove_from_location` aplica a mesma ideia a quem sai.
 
-**Conta inteira.** `can_manage_account(actor, target)` vê os polos onde o alvo tem filiações ativas e exige, polo a polo, `core.manage_members` e um nível ≥ ao do alvo. Compara em cada polo, não o nível mais alto de cada um. O nível do alvo vem diretamente das filiações, para que uma conta desativada não passe a contar como nível 0.
+**Conta inteira.** `can_manage_account(actor, target)` vê os polos onde o alvo tem filiações ativas ou futuras e exige, polo a polo, `core.manage_members` e um nível ≥ ao do alvo. Compara em cada polo, não o nível mais alto de cada um. O nível do alvo vem diretamente das filiações, para que uma conta desativada não passe a contar como nível 0.
 
 **Orientações.** `mentees_of(user, location)` devolve as orientandas nesse polo. Em `salas`, `people_with_visible_schedule` e `people_with_visible_hours` devolvem as pessoas cujo horário ou horas alguém pode ver: as próprias, as orientandas, ou todas as do polo se tiver `salas.view_all_bookings` ou `salas.view_reports`.
 
@@ -109,7 +113,7 @@ Corridos no Docker, a partir da raiz do repositório:
 
 | Comando | Resultado |
 |---|---|
-| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 419 passaram (91 antes desta tarefa) |
+| `docker compose -f deploy/docker-compose.dev.yml run --rm app pytest` | 425 passaram depois da revisão (419 antes dela; 91 antes desta tarefa) |
 | `... run --rm --no-deps app ruff check .` | sem erros |
 | `... run --rm --no-deps app ruff format --check .` | sem alterações |
 | `... run --rm app python manage.py makemigrations --check --dry-run` | sem migrações em falta |
@@ -117,9 +121,9 @@ Corridos no Docker, a partir da raiz do repositório:
 | `deploy/tests/check-production.sh` | todas as verificações passaram |
 | `... run --rm --no-deps app pip-audit ...` | sem vulnerabilidades conhecidas |
 
-**Verificação por mutação:** como os testes passaram à primeira, parti 23 regras do motor uma a uma (por exemplo, tirar o `active_on()` ou o teto) para confirmar que cada uma faz falhar pelo menos um teste. O script não fica no repositório. Ao fim do reforço descrito abaixo, as 23 são apanhadas. Só cobre as regras escolhidas, não é uma medida de cobertura completa.
+**Verificação por mutação:** como os testes passaram à primeira, parti as regras do motor uma a uma (por exemplo, tirar o `active_on()` ou o teto) para confirmar que cada uma faz falhar pelo menos um teste. O script não fica no repositório. Ao fim do reforço descrito abaixo, as 23 mutações são apanhadas, e as 24 depois da revisão, que acrescentou uma para as filiações futuras do alvo. Só cobre as regras escolhidas, não é uma medida de cobertura completa.
 
-**CI:** ver o PR.
+**CI:** o primeiro push passou nos quatro trabalhos (`lint`, `test`, `deploy-check`, `pip-audit`). Ver o PR para o estado depois da revisão.
 
 ## Problemas encontrados e como foram resolvidos
 
@@ -128,10 +132,14 @@ Corridos no Docker, a partir da raiz do repositório:
   - O bloqueio de ações sobre a conta do admin: sem filiações, a resposta já era "não". Acrescentei um teste em que o admin tem uma filiação indevida.
 - **Armadilhas tidas em conta no desenho, cada uma com teste:** "todos os polos" é verdade quando não há nenhum; a conta desativada parecia ter nível 0; comparar o nível mais alto global em vez de polo a polo; o nível de Profissional não dá direito a atribuir papéis; 23:30 UTC de 30 de junho já é 1 de julho em Lisboa.
 
+- **Revisão do PR:** as ações sobre a conta inteira passaram a contar as filiações futuras do alvo, como pedido. Os testes que garantiam o contrário foram substituídos. Há testes novos para um papel futuro noutro polo, um papel futuro mais alto no mesmo polo, uma conta que ainda não começou, o papel futuro de quem age (não conta) e um polo inativo.
+
 ## Pendentes para tarefas seguintes
 
-- **Tarefa 4:** decoradores ou mixins para as vistas devolverem 403, a usar nos ecrãs de contas; `AuditEvent` nestas ações; `can_manage_account` é a regra a usar em desativar e repor o 2FA. O envio de links de recuperação ainda não tem regra de quem o pode fazer.
-- **Tarefa 6 e 8:** "só as suas" (titular ou participante) é uma verificação sobre a reserva e depende do modelo `Booking`. Guardar "em nome de" no `BookingEvent` quando se usar `on_behalf_of`. O titular de uma marcação direta nunca pode ser o admin.
+- **Tarefa 4:** decoradores ou mixins para as vistas devolverem 403, a usar nos ecrãs de contas; `AuditEvent` nestas ações; `can_manage_account` é a regra a usar em desativar e repor o 2FA.
+- **Tarefa 4, links de recuperação:** pode enviar quem tiver `core.manage_members` num polo onde o alvo tenha uma filiação ativa ou futura. O envio tem limite e fica no `AuditEvent`.
+- **Tarefa 6:** com `salas.book_directly`, o secretariado e a coordenação marcam com qualquer membro ativo do polo como titular. O titular nunca pode ser o admin. `on_behalf_of` no motor continua só para o Admin.
+- **Tarefas 6 e 8:** "só as suas" (titular ou participante) é uma verificação sobre a reserva e depende do modelo `Booking`. O `BookingEvent` guarda "em nome de" sempre que o titular é diferente de quem faz a ação, e não só quando se usa `on_behalf_of`.
 - **Tarefa 10:** o titular vê as horas dos participantes nas suas reservas, também ao nível da reserva.
 - **Área técnica:** o modo "ver como utilizador" (só leitura e registado) ainda não existe.
 - **Por decidir no futuro, se fizer falta:** o que acontece a reservas e pedidos de um polo que fica inativo. Hoje só está definido o efeito nas permissões.

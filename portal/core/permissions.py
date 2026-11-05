@@ -157,8 +157,10 @@ def can_remove_from_location(actor, target, location):
 def can_manage_account(actor, target):
     """Deactivating an account or resetting its 2FA: a level >= the target's in all their locations.
 
-    A person never does this to their own account, because a stolen session could then remove the
-    2FA. Someone with no active membership is not in any location, so only the admin can act.
+    Their locations are the ones with an active or future membership, so that an account can be
+    managed before it starts and no one acts on a person about to outrank them elsewhere. A person
+    never does this to their own account, because a stolen session could then remove the 2FA.
+    Someone whose memberships have all ended is in no location, so only the admin can act.
     """
     if actor.pk == target.pk:
         return False
@@ -168,8 +170,8 @@ def can_manage_account(actor, target):
         return False
     # From the rows, not from role_level_in: a deactivated account keeps the level it had.
     target_levels = {}
-    active = Membership.objects.active_on().filter(user=target)
-    for location_id, role in active.values_list("location_id", "role"):
+    memberships = Membership.objects.filter(user=target).overlapping(timezone.localdate())
+    for location_id, role in memberships.values_list("location_id", "role"):
         target_levels[location_id] = max(target_levels.get(location_id, 0), ROLE_LEVELS[role])
     if not target_levels:
         return False
