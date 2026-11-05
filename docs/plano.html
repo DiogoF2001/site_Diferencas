@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plano — Área reservada e gestão de salas · CDI Diferenças</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul:#1f4e8c; --azul-esc:#163a69; --azul-claro:#e8f0fa;
+    --lima:#8dc63f; --lima-claro:#f1f8e6;
+    --texto:#1d2733; --suave:#5a6676; --linha:#d9e1ea; --fundo:#fbfcfe;
+    --aviso:#fff6e0; --aviso-borda:#e7b416;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+       color:var(--texto);background:var(--fundo);line-height:1.6;font-size:17px}
+  header.topo{background:var(--azul);color:#fff;padding:40px 24px 32px;border-bottom:6px solid var(--lima)}
+  header.topo .wrap{max-width:1180px;margin:0 auto}
+  header.topo .eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;opacity:.85;margin:0 0 6px}
+  header.topo h1{margin:0 0 8px;font-size:2rem;line-height:1.2}
+  header.topo p.meta{margin:0;opacity:.9;font-size:.95rem}
+  .layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:250px 1fr;gap:40px;padding:32px 24px 80px}
+  nav.indice{position:sticky;top:20px;align-self:start;font-size:.92rem}
+  nav.indice h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--suave);margin:0 0 10px}
+  nav.indice ol{margin:0;padding-left:20px}
+  nav.indice li{margin:4px 0}
+  nav.indice a{color:var(--azul);text-decoration:none}
+  nav.indice a:hover{text-decoration:underline}
+  main{min-width:0}
+  section{margin:0 0 44px}
+  h2{font-size:1.45rem;color:var(--azul-esc);margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--linha)}
+  h3{font-size:1.1rem;margin:24px 0 8px;color:var(--azul-esc)}
+  p{margin:0 0 12px}
+  ul,ol{margin:0 0 12px;padding-left:22px}
+  li{margin:4px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--azul-claro);padding:1px 5px;border-radius:4px}
+  .tabela{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--linha);border-radius:8px;background:#fff}
+  table{border-collapse:collapse;width:100%;font-size:.93rem}
+  th,td{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--linha)}
+  th{background:var(--azul-claro);color:var(--azul-esc);font-weight:700}
+  tr:last-child td{border-bottom:none}
+  td.c{text-align:center}
+  .ok{color:#2f7d1e;font-weight:700}
+  .nao{color:#9aa5b1}
+  .caixa{border-left:5px solid var(--lima);background:var(--lima-claro);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+  .caixa.aviso{border-color:var(--aviso-borda);background:var(--aviso)}
+  .caixa p:last-child,.caixa ul:last-child{margin-bottom:0}
+  .grelha{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:12px 0}
+  .cartao{background:#fff;border:1px solid var(--linha);border-radius:10px;padding:14px 16px}
+  .cartao h4{margin:0 0 6px;font-size:1rem;color:var(--azul)}
+  .cartao p{margin:0;font-size:.93rem;color:var(--suave)}
+  .tag{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:999px;background:var(--azul-claro);color:var(--azul-esc);margin-left:4px;vertical-align:middle}
+  .tag.est{background:var(--aviso);color:#7a5a00}
+  .estados{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 14px}
+  .estado{padding:4px 12px;border-radius:999px;border:1px solid var(--linha);background:#fff;font-size:.9rem}
+  .estado.p{border-color:var(--aviso-borda)} .estado.a{border-color:var(--lima)}
+  .seta{color:var(--suave)}
+  .fases{counter-reset:f;list-style:none;padding:0}
+  .fases li{counter-increment:f;position:relative;padding:0 0 14px 46px;margin:0}
+  .fases li::before{content:counter(f);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;
+      background:var(--azul);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem}
+  .fontes{font-size:.88rem;color:var(--suave)}
+  .fontes a{color:var(--azul)}
+  footer{max-width:1180px;margin:0 auto;padding:0 24px 40px;color:var(--suave);font-size:.85rem}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    nav.indice{position:static;border:1px solid var(--linha);border-radius:8px;padding:14px;background:#fff}
+  }
+  @media print{
+    nav.indice{display:none}
+    .layout{grid-template-columns:1fr;padding:0}
+    header.topo{padding:20px}
+    section{break-inside:avoid-page}
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="wrap">
+    <p class="eyebrow">CDI Diferenças · Plano técnico</p>
+    <h1>Área reservada e serviço de gestão de salas</h1>
+    <p class="meta">Versão final do plano · 5 de novembro de 2026 · Autor: Diogo Ferreira</p>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="indice" aria-label="Índice">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#resumo">Resumo das decisões</a></li>
+    <li><a href="#arquitetura">Arquitetura</a></li>
+    <li><a href="#stack">Stack tecnológica</a></li>
+    <li><a href="#acesso">Modelo de acesso por polo</a></li>
+    <li><a href="#contas">Contas e autenticação</a></li>
+    <li><a href="#salas">Módulo de salas</a></li>
+    <li><a href="#pedidos">Fluxo de pedidos</a></li>
+    <li><a href="#participantes">Participantes e horas</a></li>
+    <li><a href="#vistas">Vistas e relatórios</a></li>
+    <li><a href="#regras">Regras configuráveis por polo</a></li>
+    <li><a href="#historicos">Históricos e auditoria</a></li>
+    <li><a href="#dados">Modelo de dados</a></li>
+    <li><a href="#alojamento">Alojamento</a></li>
+    <li><a href="#rgpd">RGPD e segurança</a></li>
+    <li><a href="#fases">Fases</a></li>
+    <li><a href="#confirmar">A confirmar com o centro</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="resumo">
+  <h2>1. Resumo das decisões</h2>
+  <div class="grelha">
+    <div class="cartao"><h4>Portal separado</h4><p>Fica em <code>portal.diferencas.net</code>, com acesso por "Área reservada" no site público. Tem a mesma identidade visual, mas é uma aplicação independente.</p></div>
+    <div class="cartao"><h4>Monólito modular</h4><p>Contas, papéis e permissões formam um núcleo comum. Cada serviço (Salas agora, outros no futuro) é um módulo que se liga a esse núcleo.</p></div>
+    <div class="cartao"><h4>Django + PostgreSQL</h4><p>Começa no Django 5.2 LTS e migra para a 6.2 LTS em 2027. A interface usa HTMX e o EventCalendar (MIT).</p></div>
+    <div class="cartao"><h4>Tudo em Docker</h4><p>Usa Docker Compose, por isso pode correr num VPS, na cloud ou no centro. O sítio do alojamento decide-se mais tarde.</p></div>
+    <div class="cartao"><h4>Papéis por polo</h4><p>Cada pessoa tem uma só conta. Os papéis vêm de filiações (pessoa + polo + papel), e uma pessoa pode ter papéis diferentes em polos diferentes.</p></div>
+    <div class="cartao"><h4>Sem serviços pagos</h4><p>Não depende de Google nem de Microsoft. A única dependência externa é um servidor SMTP para os e-mails.</p></div>
+  </div>
+</section>
+
+<section id="arquitetura">
+  <h2>2. Arquitetura</h2>
+  <ul>
+    <li><strong>Site público e portal separados.</strong> Uma falha no site público não chega às contas nem às reservas, e cada um é atualizado ao seu ritmo.</li>
+    <li><strong>Núcleo comum:</strong> utilizadores, polos, filiações, papéis, permissões, orientações, notificações e auditoria. Todos os serviços futuros usam este núcleo e não criam contas próprias.</li>
+    <li><strong>Módulos de serviço:</strong> o primeiro é o de <em>Salas</em>. Cada módulo declara as suas permissões com um prefixo (<code>salas.*</code>, mais tarde por exemplo <code>documentos.*</code>), e essas permissões são atribuídas aos papéis que já existem.</li>
+    <li><strong>Regra de ouro:</strong> o código verifica <em>permissões num polo</em>, nunca nomes de grupos. Por exemplo, pergunta "tem <code>salas.aprovar</code> no polo P?" e não "é secretariado?".</li>
+  </ul>
+</section>
+
+<section id="stack">
+  <h2>3. Stack tecnológica</h2>
+  <div class="tabela"><table>
+    <tr><th>Camada</th><th>Escolha</th><th>Porquê</th></tr>
+    <tr><td>Backend</td><td>Django 5.2 LTS → 6.2 LTS (Python)</td><td>Traz incluídos a autenticação, as sessões, a proteção CSRF, as migrações, o backoffice, os formulários e o e-mail. Cada versão LTS tem cerca de 3 anos de correções de segurança.</td></tr>
+    <tr><td>Base de dados</td><td>PostgreSQL</td><td>Tem restrições de exclusão sobre intervalos de tempo, que garantem na própria base de dados que não há reservas duplicadas.</td></tr>
+    <tr><td>Interface</td><td>Páginas geradas no servidor + HTMX</td><td>Dá interatividade sem uma aplicação de frontend à parte, por isso há menos dependências e menos superfície de ataque.</td></tr>
+    <tr><td>Calendário</td><td>EventCalendar (vkurko, licença MIT)</td><td>Tem vistas por sala ("resource") gratuitas. No FullCalendar estas vistas são pagas (Premium).</td></tr>
+    <tr><td>Tarefas agendadas</td><td>Serviço <em>worker</em> separado</td><td>Trata de expirar pedidos, desativar estagiárias no fim do estágio, enviar e-mails e gerar as ocorrências das séries.</td></tr>
+  </table></div>
+
+  <h3>Porque não Next.js</h3>
+  <ul>
+    <li><strong>Não traz o essencial.</strong> Autenticação, convites, 2FA, backoffice, migrações e tarefas agendadas exigiriam 6 a 8 bibliotecas de terceiros, cada uma com o seu ciclo de versões.</li>
+    <li><strong>Muda depressa.</strong> Sai uma versão principal por ano e cada uma é suportada cerca de dois anos. Nas versões em Maintenance LTS, as atualizações podem trazer alterações incompatíveis.</li>
+    <li><strong>Falhas recentes graves.</strong> A CVE-2025-29927 (CVSS 9.1) permitia contornar a autorização feita no middleware. A CVE-2025-55182 (CVSS 10.0, dezembro de 2025) permitia executar código remotamente sem autenticação e foi explorada ativamente.</li>
+    <li><strong>Mais dependências.</strong> Assenta no ecossistema npm, que tem centenas de dependências indiretas e sofreu ataques à cadeia de fornecimento em 2025.</li>
+    <li><strong>Mais difícil de passar a outra pessoa.</strong> Um projeto Django segue convenções que qualquer programador Django reconhece. Um projeto Next.js depende das bibliotecas que cada equipa escolheu.</li>
+  </ul>
+</section>
+
+<section id="acesso">
+  <h2>4. Modelo de acesso por polo</h2>
+  <p><strong>Filiação = pessoa + polo + papel</strong>, com datas de início e fim. A mesma pessoa pode ser Profissional num polo e Coordenação noutro, ou ter dois papéis no mesmo polo; nesse caso as permissões somam-se. O <strong>Admin</strong> é o único papel global.</p>
+
+  <h3>Papéis</h3>
+  <ul>
+    <li><strong>Profissional</strong>, com dois subpapéis: <strong>Residente</strong> e <strong>Estagiária</strong>. Têm as mesmas permissões no módulo de Salas; a separação existe para serviços futuros.</li>
+    <li><strong>Secretariado:</strong> gere a operação diária do polo.</li>
+    <li><strong>Coordenação / Direção técnica:</strong> tem acesso total ao polo e também aos relatórios.</li>
+    <li><strong>Admin</strong> (global, criado na instalação): tem tudo, incluindo a área técnica.</li>
+  </ul>
+
+  <h3>Permissões (dentro do polo)</h3>
+  <div class="tabela"><table>
+    <tr><th>Permissão</th><th>Profissional<br><small>Residente / Estagiária</small></th><th>Secretariado</th><th>Coordenação</th><th>Admin</th></tr>
+    <tr><td>Ver ocupação (livre/ocupado)</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Ver detalhes e histórico de todas as reservas</td><td class="c">só as suas*</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Submeter pedidos de reserva</td><td class="c ok">✓</td><td class="c">marca diretamente</td><td class="c">marca diretamente</td><td class="c ok">✓</td></tr>
+    <tr><td>Adicionar participantes às suas reservas</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Aprovar e recusar pedidos; alterar qualquer reserva</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Gerir salas, salas exclusivas, bloqueios e regras do polo</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Anular bloqueios automáticos (feriados)</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Criar contas e atribuir papéis no polo</td><td class="c nao">–</td><td class="c">até Secretariado</td><td class="c">até Coordenação</td><td class="c">tudo</td></tr>
+    <tr><td>Listagem de profissionais do polo (e papéis noutros polos)</td><td class="c nao">–</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Relatórios de ocupação e horas</td><td class="c">as suas e as das orientandas</td><td class="c nao">–</td><td class="c ok">✓</td><td class="c ok">✓</td></tr>
+    <tr><td>Área técnica</td><td class="c nao">–</td><td class="c nao">–</td><td class="c nao">–</td><td class="c ok">✓</td></tr>
+  </table></div>
+  <p><small>* Inclui as reservas em que a pessoa é titular ou participante.</small></p>
+  <p>A área técnica inclui os logs técnicos, o estado do sistema, a configuração do SMTP e dos segredos, a criação de polos, as funcionalidades que se ligam e desligam e um modo "ver como utilizador" (só de leitura e registado).</p>
+
+  <h3>Regras de gestão de contas</h3>
+  <ul>
+    <li><strong>Acesso a um polo:</strong> uma pessoa só tem acesso a um polo depois de o secretariado ou a coordenação <em>desse</em> polo lhe criar uma filiação lá.</li>
+    <li><strong>Até que papel se pode atribuir:</strong> cada pessoa só atribui papéis até ao seu próprio nível no polo. O secretariado pode criar uma conta de secretariado do início ao fim, sem precisar do admin.</li>
+    <li><strong>E-mail já registado:</strong> cria-se apenas a nova filiação. Quem gere o polo B não vê as reservas nem a atividade dessa pessoa noutros polos.</li>
+    <li><strong>Palavras-passe:</strong> ninguém define a palavra-passe de outra pessoa. Só se pode enviar um link de recuperação para o e-mail dela.</li>
+    <li><strong>Ações sobre a conta inteira:</strong> desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em <em>todos</em> os polos onde ela está. Caso contrário, só se pode removê-la do próprio polo.</li>
+    <li><strong>Listagem da coordenação:</strong> a coordenação tem uma lista dos profissionais do seu polo, com os papéis de cada um nesse polo. Opcionalmente, mostra também os papéis e polos de cada pessoa noutros polos, mas nunca a atividade lá. A lista pode ser exportada em CSV.</li>
+  </ul>
+
+  <h3>Orientação</h3>
+  <p>É uma relação entre uma <strong>orientadora</strong> (profissional) e uma <strong>orientanda</strong> (estagiária), definida por polo pelo secretariado ou pela coordenação, com datas de início e fim. A orientadora vê o horário e as horas da orientanda nesse polo. A relação fica disponível para serviços futuros, como avaliações e relatórios de estágio.</p>
+</section>
+
+<section id="contas">
+  <h2>5. Contas e autenticação</h2>
+  <ul>
+    <li><strong>Sem registo público.</strong> As contas são criadas por convite: quem gere o polo cria a conta com o e-mail, e a pessoa recebe um link para definir a palavra-passe. O link só funciona uma vez e expira em 48 h.</li>
+    <li><strong>Admin "hardcoded":</strong> a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.</li>
+    <li><strong>2FA:</strong> obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.</li>
+    <li><strong>Saída de pessoas:</strong> as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho nesse dia.</li>
+    <li><strong>E-mail:</strong> usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.</li>
+  </ul>
+</section>
+
+<section id="salas">
+  <h2>6. Módulo de salas</h2>
+  <ul>
+    <li><strong>Sala:</strong> nome, polo e estado (ativa ou inativa). A sala não tem um tipo "exclusiva" ou "partilhada", e não se regista equipamento.</li>
+    <li><strong>Salas exclusivas:</strong> são <em>atribuições</em> com horário, por exemplo "Sala 3 é da Dra. X de segunda a quarta". Uma sala exclusiva a tempo inteiro é só uma atribuição que cobre todo o horário de funcionamento. Assim, uma sala pode ser exclusiva uns dias e partilhada nos outros. O titular não precisa de fazer pedidos dentro do seu bloco, e os outros veem a sala como "Ocupada".</li>
+    <li><strong>Libertação de períodos:</strong> fica prevista no modelo de dados, como uma exceção à atribuição, mas <em>desligada</em>. O admin pode ativá-la por polo.</li>
+    <li><strong>Reservas duplicadas impossíveis:</strong> uma restrição do PostgreSQL impede reservas aprovadas sobrepostas na mesma sala. Isto inclui as atribuições exclusivas e os bloqueios, e vale mesmo que duas pessoas aprovem ao mesmo tempo.</li>
+    <li><strong>"Livre/ocupado" filtrado no servidor:</strong> das reservas de outras pessoas, o servidor só envia início, fim e "ocupado". Esconder os detalhes só na interface não chegaria.</li>
+    <li><strong>Sem dados de utentes:</strong> as notas das reservas são só para notas logísticas. Isto mantém o serviço fora do regime de dados de saúde.</li>
+  </ul>
+</section>
+
+<section id="pedidos">
+  <h2>7. Fluxo de pedidos</h2>
+  <div class="estados">
+    <span class="estado p">Pendente</span><span class="seta">→</span>
+    <span class="estado a">Aprovado</span><span class="seta">/</span>
+    <span class="estado">Recusado (com motivo)</span><span class="seta">/</span>
+    <span class="estado">Cancelado</span><span class="seta">/</span>
+    <span class="estado">Expirado</span>
+  </div>
+  <ul>
+    <li><strong>Fila por polo, por ordem de chegada, com ordem indicativa.</strong> Cada pedido mostra há quanto tempo está à espera, mas o secretariado pode decidir por qualquer ordem. Todos os pedidos são aprovados explicitamente.</li>
+    <li><strong>Pedidos sobrepostos:</strong> quando um pedido é aprovado, os outros que se sobrepõem na mesma sala continuam na fila, mas "Aprovar nesta sala" fica bloqueado. O sistema mostra a reserva com que colidem e propõe duas saídas:
+      <ul>
+        <li><strong>Aprovar noutra sala</strong>, com a lista das salas livres durante todo esse intervalo;</li>
+        <li><strong>Recusar</strong>.</li>
+      </ul>
+    </li>
+    <li><strong>Aprovar noutra sala:</strong> a reserva fica logo feita e o requerente é notificado. A partir daí, o requerente pode pedir para alterar a hora ou a sala, ou cancelar.</li>
+    <li><strong>Pedidos de alteração:</strong> entram na fila. A reserva atual mantém-se até haver decisão.</li>
+    <li><strong>Marcação direta:</strong> o secretariado e a coordenação podem marcar diretamente, sem passar pela fila. Mesmo assim, não conseguem criar conflitos.</li>
+    <li><strong>Pedidos recorrentes:</strong> a série é aprovada de uma vez. As ocorrências em conflito aparecem em lista, e cada uma pode ir para outra sala ou ser recusada. A aprovação parcial é permitida.</li>
+    <li><strong>Cancelamento:</strong> a sala fica livre, e os pedidos em fila para esse horário voltam a poder ser aprovados. Isto acontece sozinho, porque os conflitos são calculados no momento.</li>
+    <li><strong>Expiração:</strong> um pedido sem decisão expira automaticamente à hora de início.</li>
+  </ul>
+  <div class="caixa">
+    <p><strong>Cancelamento tardio.</strong> Um cancelamento conta como tardio quando é feito a menos de 24 h do início. <strong>Exceção:</strong> se o secretariado ou a coordenação mudaram a hora ou a sala com menos de 48 h de antecedência, o cancelamento pelo requerente nunca conta como tardio. Os dois valores são configuráveis por polo.</p>
+  </div>
+</section>
+
+<section id="participantes">
+  <h2>8. Participantes e horas</h2>
+  <ul>
+    <li><strong>Quem pode adicionar:</strong> o titular (médico ou estagiária) pode adicionar membros do mesmo polo, logo no pedido ou depois de a reserva estar aprovada. Os participantes <strong>entram logo</strong>, recebem uma notificação e podem <strong>sair</strong> a qualquer momento.</li>
+    <li><strong>Divisão do tempo:</strong> cada participante tem um intervalo dentro da reserva, que por omissão é a reserva toda. Por exemplo, numa reserva das 9h às 12h, a estagiária A fica das 9h às 10h e a B das 10h às 12h. Os intervalos podem sobrepor-se, como numa consulta com dois médicos.</li>
+    <li><strong>O que os participantes podem fazer:</strong> veem os detalhes e o histórico da reserva, que também aparece no horário e no feed iCal deles. Não a podem editar.</li>
+    <li><strong>Contagem de horas:</strong> soma os intervalos de participação em reservas aprovadas que já passaram. Quem vê:
+      <ul>
+        <li>cada pessoa vê as suas horas;</li>
+        <li>o titular vê as horas dos participantes nas reservas dele;</li>
+        <li>a orientadora vê as horas das orientandas;</li>
+        <li>a coordenação vê as de todo o polo.</li>
+      </ul>
+      Tudo pode ser exportado em CSV.</li>
+  </ul>
+</section>
+
+<section id="vistas">
+  <h2>9. Vistas e relatórios</h2>
+  <div class="grelha">
+    <div class="cartao"><h4>Grelha do polo <span class="tag">Secretariado · Coordenação</span></h4><p>Salas nas linhas, horas nas colunas, com nomes visíveis. Permite arrastar para mover reservas, mostra os pedidos pendentes sobrepostos e permite criar séries.</p></div>
+    <div class="cartao"><h4>Grelha do polo <span class="tag">Profissionais</span></h4><p>A mesma grelha, com os blocos dos outros a cinzento como "Ocupado" e as reservas da própria pessoa em detalhe.</p></div>
+    <div class="cartao"><h4>O meu horário <span class="tag">Todos</span></h4><p>Vista por dia e por semana, sem divisão por sala, com todas as reservas e pedidos da pessoa em todos os polos, cada um com a etiqueta do polo.</p></div>
+    <div class="cartao"><h4>Encontrar sala livre</h4><p>Pesquisa por dia, hora e duração no polo escolhido, com submissão do pedido logo a partir do resultado.</p></div>
+    <div class="cartao"><h4>Fila de pedidos <span class="tag">Secretariado · Coordenação</span></h4><p>Pedidos ordenados por chegada, com o tempo de espera, os conflitos e as salas alternativas.</p></div>
+    <div class="cartao"><h4>Feed iCal <span class="tag est">desejável</span></h4><p>Um link privado e revogável, só com as reservas aprovadas. Funciona em qualquer app de calendário.</p></div>
+    <div class="cartao"><h4>Relatórios <span class="tag">Coordenação</span></h4><p>Taxa de ocupação por sala e por período, horas por profissional e estagiária, tempo médio até à decisão, recusas e cancelamentos tardios.</p></div>
+    <div class="cartao"><h4>Listagem de profissionais <span class="tag">Coordenação</span></h4><p>Os papéis de cada profissional no polo e, opcionalmente, noutros polos. Exportável em CSV.</p></div>
+  </div>
+</section>
+
+<section id="regras">
+  <h2>10. Regras configuráveis por polo</h2>
+  <p>Estes são os parâmetros de funcionamento das reservas. <strong>Todos os valores são editáveis por polo</strong> pelo secretariado e pela coordenação, numa página de configuração do portal, sem mexer no código. O admin define os valores por omissão que cada polo novo recebe.</p>
+  <div class="tabela"><table>
+    <tr><th>Regra</th><th>Valor por omissão</th></tr>
+    <tr><td>Horário de funcionamento</td><td>seg–sex, 08:00–20:00 <span class="tag est">estimativa</span></td></tr>
+    <tr><td>Blocos de tempo</td><td>15 min <span class="tag est">estimativa</span></td></tr>
+    <tr><td>Duração por pedido</td><td>mínimo 30 min, máximo 4 h <span class="tag est">estimativa</span></td></tr>
+    <tr><td>Antecedência mínima do pedido</td><td>24 h. Para menos do que isso, o secretariado marca diretamente <span class="tag est">estimativa</span></td></tr>
+    <tr><td>Antecedência máxima</td><td>8 semanas para pedidos pontuais; recorrentes até ao fim do ano letivo <span class="tag est">estimativa</span></td></tr>
+    <tr><td>Pedido sem decisão</td><td>expira à hora de início</td></tr>
+    <tr><td>Editar um pedido pendente</td><td>mudar a hora ou a sala faz perder o lugar na fila; participantes e notas não</td></tr>
+    <tr><td>Editar uma reserva aprovada</td><td>mudar a hora ou a sala cria um pedido de alteração; a reserva atual mantém-se até haver decisão</td></tr>
+    <tr><td>Cancelamento tardio</td><td>menos de 24 h antes do início</td></tr>
+    <tr><td>Exceção ao tardio</td><td>alteração feita pelo secretariado ou pela coordenação com menos de 48 h de antecedência</td></tr>
+    <tr><td>Feriados</td><td>nacionais e municipais bloqueados automaticamente; o secretariado pode anular o bloqueio de um dia concreto, e a anulação fica no histórico</td></tr>
+    <tr><td>Bloqueios manuais</td><td>criados e removidos pelo secretariado ou pela coordenação; o sistema lista as reservas afetadas e notifica os titulares</td></tr>
+    <tr><td>Libertação de salas exclusivas</td><td>desligada (o admin pode ativá-la por polo)</td></tr>
+  </table></div>
+</section>
+
+<section id="historicos">
+  <h2>11. Históricos e auditoria</h2>
+  <p>Os registos são só de acrescentar. A aplicação não os edita nem apaga, e o utilizador da base de dados com que ela trabalha não tem permissão para alterar nem apagar nessas tabelas.</p>
+  <div class="tabela"><table>
+    <tr><th>Registo</th><th>Conteúdo</th><th>Quem vê</th></tr>
+    <tr><td>Histórico de cada pedido ou reserva</td><td>Cada evento (criação, edição, aprovação, recusa, mudança de sala ou hora, participantes, divisão de horas, cancelamento), com data e hora, utilizador, "em nome de" quando aplicável, e o valor antes e depois</td><td>O titular e os participantes; o secretariado e a coordenação do polo; o admin</td></tr>
+    <tr><td>Auditoria de contas</td><td>Convites, filiações, papéis, orientações, desativações, reposições de 2FA e logins falhados</td><td>A coordenação (membros do seu polo) e o admin</td></tr>
+    <tr><td>Logs técnicos</td><td>Erros, desempenho e tarefas agendadas</td><td>Só o admin</td></tr>
+  </table></div>
+  <p>As datas e horas são guardadas em UTC e mostradas na hora de Lisboa.</p>
+</section>
+
+<section id="dados">
+  <h2>12. Modelo de dados (entidades principais)</h2>
+  <div class="tabela"><table>
+    <tr><th>Entidade</th><th>Campos principais</th></tr>
+    <tr><td>Utilizador</td><td>nome, e-mail (único), estado, 2FA</td></tr>
+    <tr><td>Polo</td><td>nome, morada, estado</td></tr>
+    <tr><td>Filiação</td><td>utilizador, polo, papel, subpapel (Residente/Estagiária), início, fim</td></tr>
+    <tr><td>Orientação</td><td>orientadora, orientanda, polo, início, fim</td></tr>
+    <tr><td>Sala</td><td>polo, nome, estado</td></tr>
+    <tr><td>Atribuição exclusiva</td><td>sala, profissional, dias e horas, início, fim; exceções (para a libertação, desligada)</td></tr>
+    <tr><td>Reserva</td><td>sala, titular, início, fim, estado, série, notas logísticas, criada por</td></tr>
+    <tr><td>Série recorrente</td><td>regra de repetição (formato iCalendar), exceções; gera as ocorrências</td></tr>
+    <tr><td>Pedido de alteração</td><td>reserva, nova sala e/ou hora, estado</td></tr>
+    <tr><td>Participação</td><td>reserva, utilizador, intervalo dentro da reserva</td></tr>
+    <tr><td>Bloqueio</td><td>polo, sala (ou todas), intervalo, origem (feriado ou manual), anulado por</td></tr>
+    <tr><td>Regras do polo</td><td>todos os parâmetros da secção 10</td></tr>
+    <tr><td>Evento de histórico / auditoria</td><td>entidade, ação, utilizador, "em nome de", antes e depois, data e hora</td></tr>
+  </table></div>
+</section>
+
+<section id="alojamento">
+  <h2>13. Alojamento</h2>
+  <h3>Docker Compose</h3>
+  <ul>
+    <li><strong>proxy:</strong> Caddy, com HTTPS automático;</li>
+    <li><strong>app:</strong> Django com Gunicorn;</li>
+    <li><strong>worker:</strong> tarefas agendadas;</li>
+    <li><strong>db:</strong> PostgreSQL;</li>
+    <li><strong>backup:</strong> cópia diária encriptada da base de dados, guardada fora do servidor, com teste de reposição todos os meses.</li>
+  </ul>
+  <p>Os segredos (incluindo os do admin) ficam num ficheiro de ambiente fora do repositório.</p>
+  <h3>Opções (decisão adiada)</h3>
+  <div class="tabela"><table>
+    <tr><th>Opção</th><th>Custo indicativo</th><th>Notas</th></tr>
+    <tr><td>VPS na UE (por exemplo Hetzner, Alemanha/Finlândia)</td><td>≈ €5–7/mês + backups</td><td>Mais simples e mais barato. A atualização do sistema operativo fica do nosso lado.</td></tr>
+    <tr><td>Azure (programa Microsoft for Nonprofits)</td><td>€0 dentro do crédito anual de 2.000 USD, se a APPT21 for elegível</td><td>Infraestrutura gerida. A doação tem de ser renovada todos os anos, e o crédito não usado não passa para o ano seguinte.</td></tr>
+    <tr><td>Servidor no centro</td><td>~€200–300 de uma vez (mini-PC + UPS)</td><td>Usa um Cloudflare Tunnel para não abrir portas. Fica dependente da luz e da internet do centro.</td></tr>
+  </table></div>
+  <div class="caixa aviso"><p>Contas, domínio e faturação devem ficar em nome da associação, para que o serviço não dependa de uma só pessoa.</p></div>
+</section>
+
+<section id="rgpd">
+  <h2>14. RGPD e segurança</h2>
+  <ul>
+    <li>Os dados tratados são dados de trabalhadores (nome, e-mail, horários). Não se guardam dados de utentes.</li>
+    <li>O alojamento fica na UE, com um contrato de tratamento de dados com o fornecedor e uma entrada no registo de atividades de tratamento da associação.</li>
+    <li>O prazo de conservação dos históricos e das contas desativadas deve ser definido com a direção.</li>
+    <li>As permissões são verificadas no servidor em todos os pedidos. A interface nunca é a única barreira.</li>
+    <li>Há limite de tentativas de login, sessões com expiração e cabeçalhos de segurança (CSP, HSTS).</li>
+    <li>As atualizações de segurança do Django e das imagens Docker são aplicadas todos os meses.</li>
+  </ul>
+</section>
+
+<section id="fases">
+  <h2>15. Fases</h2>
+  <ol class="fases">
+    <li><strong>Levantamento:</strong> inventário das salas e dos polos, lista de profissionais e papéis, salas exclusivas atuais e validação das regras com o secretariado.</li>
+    <li><strong>Protótipo clicável</strong> com dados fictícios e as vistas de Profissional, Secretariado, Coordenação e Admin, para validar com o secretariado e com 2–3 profissionais.</li>
+    <li><strong>MVP:</strong> núcleo de contas, filiações e permissões; salas e atribuições exclusivas; pedidos, fila e aprovação; recorrências; bloqueios; histórico; "O meu horário".</li>
+    <li><strong>Extras:</strong> participantes e divisão de horas, relatórios da coordenação, feed iCal, notificações por e-mail e listagens em CSV.</li>
+    <li><strong>Próximos serviços</strong> sobre o mesmo núcleo, aproveitando os subpapéis e as orientações.</li>
+  </ol>
+</section>
+
+<section id="confirmar">
+  <h2>16. A confirmar com o centro</h2>
+  <ul>
+    <li>Os valores marcados como <span class="tag est">estimativa</span> na secção 10.</li>
+    <li>A lista de polos que entram na primeira fase, e as salas de cada um.</li>
+    <li>Que servidor SMTP usar (o alojamento de e-mail atual do centro).</li>
+    <li>A elegibilidade da APPT21 para o Microsoft for Nonprofits, se se quiser considerar a Azure.</li>
+    <li>Quem fica responsável pela manutenção depois da entrega.</li>
+  </ul>
+</section>
+
+<section class="fontes">
+  <h2>Fontes</h2>
+  <ul>
+    <li><a href="https://www.djangoproject.com/download/">Django — versões suportadas e calendário LTS</a></li>
+    <li><a href="https://nextjs.org/support-policy">Next.js — Support Policy</a></li>
+    <li><a href="https://db.gcve.eu/vuln/cve-2025-29927">CVE-2025-29927 — Authorization Bypass in Next.js Middleware</a></li>
+    <li><a href="https://www.runzero.com/blog/vercel-next-js">CVE-2025-55182 — RCE em React Server Components / Next.js</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/industry/nonprofit/microsoft-for-nonprofits/renew-azure-grant">Microsoft — Renovação da doação Azure para associações</a></li>
+    <li><a href="https://kimmo.suominen.com/stuff/cpc-2026-08.txt">Comparação de preços de cloud (agosto de 2026)</a></li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<footer>Documento de planeamento interno · CDI Diferenças · não contém dados pessoais de utentes.</footer>
+</body>
+</html>

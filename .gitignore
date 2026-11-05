@@ -1,0 +1,29 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Django
+/portal/staticfiles/
+/portal/media/
+*.sqlite3
+
+# Backups e dados locais
+/deploy/backups/
+*.dump
+*.sql.gz
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
