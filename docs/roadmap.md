@@ -40,9 +40,10 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [x] `AuditEvent` em todas estas ações; a migração que cria esta tabela retira UPDATE/DELETE ao utilizador da app, com um teste que o prova (em `deploy/tests/check-production.sh`, porque esse utilizador só existe na configuração de produção).
 
 ## 4b. Orientações, filiações e auditoria no portal
-- [ ] Ecrã de orientações para o secretariado e a coordenação (`core.manage_mentorships`), com `AuditEvent`.
-- [ ] Alterar o papel ou as datas de uma filiação no portal, com o mesmo teto de papéis e com `AuditEvent`.
-- [ ] Consulta da auditoria de contas pela coordenação (`core.view_audit`), só sobre os membros do seu polo.
+- [x] Ecrã de orientações para o secretariado e a coordenação (`core.manage_mentorships`), com `AuditEvent`.
+- [x] Alterar o papel ou as datas de uma filiação no portal, com o mesmo teto de papéis e com `AuditEvent`.
+- [x] Consulta da auditoria de contas pela coordenação (`core.view_audit`), só sobre os membros do seu polo.
+- [x] Na lista de membros, quem tem o 2FA por configurar mostra dois botões: "Enviar link do 2FA" e "Enviar link da palavra-passe".
 
 ## 5. Salas, salas exclusivas, bloqueios e regras
 - [ ] `Room`, `RoomAssignment` (blocos semanais com início e fim; libertação prevista mas desligada por flag).

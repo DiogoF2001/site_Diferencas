@@ -16,6 +16,8 @@
         <div class="actions">
           {% if row.manages %}<a class="btn btn-small" href="{% url 'member_list' row.location.pk %}">{% translate "Members" %}</a>{% endif %}
           {% if row.lists %}<a class="btn btn-small" href="{% url 'professional_list' row.location.pk %}">{% translate "Professionals list" %}</a>{% endif %}
+          {% if row.mentors %}<a class="btn btn-small" href="{% url 'mentorship_list' row.location.pk %}">{% translate "Mentorships" %}</a>{% endif %}
+          {% if row.audits %}<a class="btn btn-small" href="{% url 'audit_list' row.location.pk %}">{% translate "Account audit" %}</a>{% endif %}
         </div>
       </section>
     {% empty %}

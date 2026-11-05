@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Mentorships" %} · {{ location }}{% endblock %}
+{% block content %}
+  <h1>{% translate "Mentorships" %} · {{ location }}</h1>
+  <p class="lead">{% translate "A mentor sees the schedule and hours of their mentees in this location, while the mentorship lasts." %}</p>
+  <div class="toolbar">
+    <a class="btn btn-primary" href="{% url 'mentorship_add' location.pk %}">{% translate "Add mentorship" %}</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{% translate "Mentor" %}</th>
+          <th scope="col">{% translate "Mentee" %}</th>
+          <th scope="col">{% translate "Dates" %}</th>
+          <th scope="col">{% translate "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mentorship in mentorships %}
+          <tr>
+            <th scope="row">{{ mentorship.mentor.full_name }}</th>
+            <td>{{ mentorship.mentee.full_name }}</td>
+            <td>{{ mentorship.start_date|date:"SHORT_DATE_FORMAT" }} – {% if mentorship.end_date %}{{ mentorship.end_date|date:"SHORT_DATE_FORMAT" }}{% else %}{% translate "no end date" %}{% endif %}</td>
+            <td>
+              <div class="actions">
+                <a class="btn btn-small" href="{% url 'mentorship_edit' location.pk mentorship.pk %}">{% translate "Change dates" %}</a>
+                <form method="post" action="{% url 'mentorship_end' location.pk mentorship.pk %}">{% csrf_token %}<button class="btn btn-small btn-danger" type="submit">{% translate "End mentorship" %}</button></form>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">{% translate "No mentorships yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -4,10 +4,12 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.signals import user_login_failed
+from django.db.models import Q
 from django.dispatch import receiver
 from django.utils import timezone
 
 from core.models import AuditEvent, User
+from core.permissions import members_of
 
 Action = AuditEvent.Action
 
@@ -34,6 +36,15 @@ def membership_snapshot(membership):
     }
 
 
+def mentorship_snapshot(mentorship):
+    return {
+        "mentor": mentorship.mentor.email,
+        "mentee": mentorship.mentee.email,
+        "start_date": mentorship.start_date.isoformat(),
+        "end_date": mentorship.end_date.isoformat() if mentorship.end_date else None,
+    }
+
+
 def normalise_email(email):
     return (email or "").strip().lower()[:254]
 
@@ -56,6 +67,18 @@ def account_emails_left(user):
         created_at__gte=since,
     ).count()
     return max(settings.PORTAL_ACCOUNT_EMAILS_PER_HOUR - sent, 0)
+
+
+def events_in(location):
+    """The account audit as the location's coordination sees it (plan, section 11).
+
+    What happened in this location, plus what happened to the whole account (logins, passwords,
+    2FA, deactivation) of the people with an active or future membership here. Events tied to
+    other locations stay out: managers never see what a person does elsewhere (plan, section 4).
+    """
+    return AuditEvent.objects.filter(
+        Q(location=location) | Q(location__isnull=True, target__in=members_of(location))
+    ).select_related("actor", "target", "location")
 
 
 @receiver(user_login_failed)

@@ -1,0 +1,4 @@
+{% load i18n %}{% if snapshots %}<dl class="changes">
+  {% if snapshots.before %}<dt>{% translate "Before" %}</dt><dd>{{ snapshots.before }}</dd>{% endif %}
+  {% if snapshots.after %}<dt>{% translate "After" %}</dt><dd>{{ snapshots.after }}</dd>{% endif %}
+</dl>{% endif %}{% if details.role_change %}<span class="hint">{% translate "Role change" %}</span>{% endif %}{% if details.reason == "limit" %}<span class="hint">{% translate "Hourly limit reached" %}</span>{% elif details.reason == "smtp" %}<span class="hint">{% translate "Email server error" %}</span>{% endif %}

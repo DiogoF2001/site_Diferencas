@@ -16,7 +16,13 @@ from core import accounts
 from core.audit import Action, record
 from core.forms import LoginForm
 from core.models import Location, Membership
-from core.permissions import enrols_two_factor_by_link, is_admin, locations_with_perm
+from core.permissions import (
+    MANAGE_MENTORSHIPS,
+    VIEW_AUDIT,
+    enrols_two_factor_by_link,
+    is_admin,
+    locations_with_perm,
+)
 from core.tokens import password_link_token
 from core.views.two_factor import start_enrolment
 
@@ -104,8 +110,18 @@ def home(request):
     listed = set(
         locations_with_perm(request.user, "core.view_professionals").values_list("pk", flat=True)
     )
+    mentored = set(
+        locations_with_perm(request.user, MANAGE_MENTORSHIPS).values_list("pk", flat=True)
+    )
+    audited = set(locations_with_perm(request.user, VIEW_AUDIT).values_list("pk", flat=True))
     rows = [
-        {"location": location, "manages": location.pk in managed, "lists": location.pk in listed}
+        {
+            "location": location,
+            "manages": location.pk in managed,
+            "lists": location.pk in listed,
+            "mentors": location.pk in mentored,
+            "audits": location.pk in audited,
+        }
         for location in locations
     ]
     context = {"rows": rows, "has_two_factor": user_has_device(request.user)}

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -122,6 +124,24 @@ class Period(models.Model):
 
     class Meta:
         abstract = True
+
+    def check_change(self, start_date, end_date):
+        """Rules for changing the dates in the portal: the past stays as it was.
+
+        A period that already started keeps its start date, and nothing can end before
+        yesterday, the end date that takes access away at once.
+        """
+        today = timezone.localdate()
+        errors = {}
+        if start_date != self.start_date and (self.start_date < today or start_date < today):
+            if self.start_date < today:
+                errors["start_date"] = _("The start date cannot change once it has passed.")
+            else:
+                errors["start_date"] = _("The start date cannot be in the past.")
+        if end_date is not None and end_date < today - timedelta(days=1):
+            errors["end_date"] = _("The end date cannot be before yesterday.")
+        if errors:
+            raise ValidationError(errors)
 
     def clean(self):
         super().clean()
@@ -300,6 +320,10 @@ class AuditEvent(AppendOnlyModel):
         MEMBERSHIP_CHANGED = "membership_changed", _("Membership changed")
         MEMBERSHIP_ENDED = "membership_ended", _("Membership ended")
         MEMBERSHIP_DELETED = "membership_deleted", _("Membership deleted")
+        MENTORSHIP_CREATED = "mentorship_created", _("Mentorship created")
+        MENTORSHIP_CHANGED = "mentorship_changed", _("Mentorship changed")
+        MENTORSHIP_ENDED = "mentorship_ended", _("Mentorship ended")
+        MENTORSHIP_DELETED = "mentorship_deleted", _("Mentorship deleted")
         ACCOUNT_DEACTIVATED = "account_deactivated", _("Account deactivated")
         ACCOUNT_REACTIVATED = "account_reactivated", _("Account reactivated")
         TWO_FACTOR_LINK_SENT = "two_factor_link_sent", _("Two-factor setup link sent")

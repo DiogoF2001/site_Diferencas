@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from core.views import auth, health, members, two_factor
+from core.views import audit, auth, health, members, mentorships, two_factor
 
 urlpatterns = [
     path("healthz/", health.healthz, name="healthz"),
@@ -42,6 +42,37 @@ urlpatterns = [
         members.account_send_link,
         name="account_send_link",
     ),
+    path(
+        "polos/<int:location_id>/membros/<int:user_id>/enviar-link-2fa/",
+        members.account_send_two_factor_link,
+        name="account_send_two_factor_link",
+    ),
+    path(
+        "polos/<int:location_id>/filiacoes/<int:membership_id>/alterar/",
+        members.membership_edit,
+        name="membership_edit",
+    ),
+    path(
+        "polos/<int:location_id>/orientacoes/",
+        mentorships.mentorship_list,
+        name="mentorship_list",
+    ),
+    path(
+        "polos/<int:location_id>/orientacoes/nova/",
+        mentorships.mentorship_add,
+        name="mentorship_add",
+    ),
+    path(
+        "polos/<int:location_id>/orientacoes/<int:mentorship_id>/alterar/",
+        mentorships.mentorship_edit,
+        name="mentorship_edit",
+    ),
+    path(
+        "polos/<int:location_id>/orientacoes/<int:mentorship_id>/terminar/",
+        mentorships.mentorship_end,
+        name="mentorship_end",
+    ),
+    path("polos/<int:location_id>/auditoria/", audit.audit_list, name="audit_list"),
     path(
         "polos/<int:location_id>/profissionais/",
         members.professional_list,
