@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: portal/requirements/dev.txt
+      - run: pip install --require-hashes -r requirements/dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      # Dependabot does not update the Postgres service below, so a bump must fail here.
+      - name: Check that every Postgres pin matches
+        working-directory: .
+        run: |
+          pin=$(grep -oE 'postgres:[^[:space:]"]+' deploy/docker-compose.yml)
+          for file in deploy/docker-compose.dev.yml deploy/backup/Dockerfile .github/workflows/ci.yml; do
+            grep -qF "$pin" "$file" || { echo "$file does not use $pin"; exit 1; }
+          done
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6-trixie@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
+        env:
+          POSTGRES_DB: portal
+          POSTGRES_USER: portal
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=pt-PT
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portal -d portal"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SECRET_KEY: ci-only-not-a-secret
+      DJANGO_DEBUG: "1"
+      DB_HOST: localhost
+      DB_NAME: portal
+      DB_USER: portal
+      DB_PASSWORD: ci-only-not-a-secret
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: portal/requirements/dev.txt
+      - run: pip install --require-hashes -r requirements/dev.txt
+      - run: pytest
+
+  deploy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create a throwaway production .env
+        run: |
+          cp deploy/.env.example deploy/.env
+          sed -i "s|^DJANGO_SECRET_KEY=.*|DJANGO_SECRET_KEY=$(openssl rand -hex 50)|" deploy/.env
+      - run: docker compose -f deploy/docker-compose.yml config --quiet
+      - run: docker compose -f deploy/docker-compose.dev.yml config --quiet
+      - run: docker compose -f deploy/docker-compose.yml build app backup
+      - run: docker compose -f deploy/docker-compose.yml run --rm --no-deps app python manage.py check --deploy --fail-level WARNING
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: portal/requirements/dev.txt
+      - run: pip install --require-hashes -r requirements/dev.txt
+      - run: pip-audit --require-hashes --disable-pip -r requirements/base.txt -r requirements/dev.txt

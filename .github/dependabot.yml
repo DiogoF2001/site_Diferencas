@@ -1,0 +1,48 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /portal/requirements
+    schedule:
+      interval: monthly
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Stay on the 5.2 LTS until the planned migration to 6.2 LTS (April 2027).
+      - dependency-name: django
+        versions: [">=5.3"]
+
+  - package-ecosystem: docker
+    directories:
+      - /deploy
+      - /deploy/backup
+    schedule:
+      interval: monthly
+    groups:
+      docker-images:
+        patterns: ["*"]
+    ignore:
+      # A new Postgres major needs pg_upgrade; a new Python minor needs a deliberate move.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: monthly
+    groups:
+      compose-images:
+        patterns: ["*"]
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]

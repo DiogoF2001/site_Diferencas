@@ -345,6 +345,7 @@
     <li><strong>db:</strong> PostgreSQL;</li>
     <li><strong>backup:</strong> cópia diária encriptada da base de dados, guardada fora do servidor, com teste de reposição todos os meses.</li>
   </ul>
+  <p>Há também um serviço pontual, <strong>migrate</strong>, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação.</p>
   <p>Os segredos (incluindo os do admin) ficam num ficheiro de ambiente fora do repositório.</p>
   <h3>Opções (decisão adiada)</h3>
   <div class="tabela"><table>

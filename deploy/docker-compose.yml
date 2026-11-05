@@ -1,0 +1,195 @@
+name: diferencas
+
+x-hardening: &hardening
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-portal: &portal
+  <<: *hardening
+  image: diferencas-portal:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: prod
+
+x-portal-env: &portal-env
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?}
+  DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-31536000}
+  DB_NAME: ${POSTGRES_DB:?}
+  DB_USER: ${PORTAL_DB_USER:?}
+  DB_PASSWORD: ${PORTAL_DB_PASSWORD:?}
+  WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-30}
+
+services:
+  proxy:
+    <<: *hardening
+    image: caddy:2.11.8-alpine@sha256:f6228111e5fafa1a5238258d0858e103f10599b8d1659a146e7726681a002bb9
+    restart: unless-stopped
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  app:
+    <<: *portal
+    restart: unless-stopped
+    environment:
+      <<: *portal-env
+      GUNICORN_CMD_ARGS: --workers=${GUNICORN_WORKERS:-3}
+    networks:
+      - edge
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, urllib.request as r;
+          host = os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0].strip();
+          r.urlopen(r.Request('http://127.0.0.1:8000/healthz/', headers={'Host': host}), timeout=4)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  worker:
+    <<: *portal
+    restart: unless-stopped
+    command: ["python", "manage.py", "runworker"]
+    environment:
+      <<: *portal-env
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, sys, time;
+          sys.exit(time.time() - os.path.getmtime('/tmp/worker-heartbeat') > 180)
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+
+  db:
+    image: postgres:18.6-trixie@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=pt-PT
+      PORTAL_DB_USER: ${PORTAL_DB_USER:?}
+      PORTAL_DB_PASSWORD: ${PORTAL_DB_PASSWORD:?}
+    volumes:
+      - db_data:/var/lib/postgresql
+      - ./db/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backup:
+    <<: *hardening
+    build:
+      context: ./backup
+    restart: unless-stopped
+    user: ${BACKUP_UID:-1000}:${BACKUP_GID:-1000}
+    environment:
+      TZ: Europe/Lisbon
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:?}
+      PGUSER: ${POSTGRES_USER:?}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?}
+      BACKUP_TIME: ${BACKUP_TIME:-02:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - type: bind
+        source: ./backups
+        target: /backups
+        bind:
+          create_host_path: false
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "[ ! -f /tmp/backup-failed ]"]
+      interval: 1m
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+      start_interval: 2s
+
+  # One-off: docker compose --profile ops run --rm migrate
+  # Runs as the table owner; the long-running services never get these credentials.
+  migrate:
+    <<: *portal
+    profiles:
+      - ops
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *portal-env
+      DB_USER: ${POSTGRES_USER:?}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  backend:
+    internal: true
