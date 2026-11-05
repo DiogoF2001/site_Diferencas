@@ -1,0 +1,11 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Two-factor authentication" %}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Two-factor authentication" %}</h1>
+  <div class="alert alert-error" role="alert">
+    <p>{% translate "This step is no longer open. Two-factor authentication must be set up right after the password, using an invitation or recovery link." %}</p>
+    <p>{% translate "Ask your location's secretariat for a new link." %}</p>
+  </div>
+{% endblock %}

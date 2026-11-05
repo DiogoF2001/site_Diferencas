@@ -15,7 +15,7 @@ def test_healthz_reports_ok_when_database_answers(client):
 
 
 def test_healthz_reports_unavailable_without_details_when_database_fails(client):
-    with mock.patch("core.views.connection") as connection:
+    with mock.patch("core.views.health.connection") as connection:
         connection.cursor.side_effect = OperationalError("secret-host refused")
         response = client.get(reverse("healthz"))
 

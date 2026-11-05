@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Two-factor authentication" %}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Two-factor authentication" %}</h1>
+  {% if validlink %}
+    <p class="lead">{% translate "Your new role requires two-factor authentication. Confirm your password to set it up." %}</p>
+    <form method="post" class="card">
+      {% csrf_token %}
+      <p class="hint">{% blocktranslate with email=account.email %}Account: {{ email }}{% endblocktranslate %}</p>
+      {% include "core/_form_fields.html" %}
+      <button class="btn btn-primary" type="submit">{% translate "Continue" %}</button>
+    </form>
+    <p class="hint">{% translate "Forgot your password? Ask your location's secretariat for a new link." %}</p>
+  {% else %}
+    <div class="alert alert-error" role="alert">
+      <p>{% translate "This link is no longer valid. It works until two-factor authentication is set up, and expires after 48 hours." %}</p>
+      <p>{% translate "Ask your location's secretariat for a new link." %}</p>
+    </div>
+  {% endif %}
+{% endblock %}

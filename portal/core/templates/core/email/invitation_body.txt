@@ -1,0 +1,10 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with name=user.full_name %}Hello, {{ name }},{% endblocktranslate %}
+
+{% translate "An account was created for you on the Diferenças portal. To start, set your password at this link:" %}
+
+{{ link }}
+
+{% blocktranslate %}The link works only once and expires after {{ hours }} hours. If it expires, ask your location's secretariat for a new one.{% endblocktranslate %}
+
+{% blocktranslate with email=user.email %}To sign in, use this email address: {{ email }}{% endblocktranslate %}
+{% endautoescape %}

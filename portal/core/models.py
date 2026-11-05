@@ -263,3 +263,93 @@ class Mentorship(Period):
             )
         if errors:
             raise ValidationError(errors)
+
+
+class AppendOnlyQuerySet(models.QuerySet):
+    """History rows are never changed or removed; the database refuses it too (core.db)."""
+
+    def update(self, **kwargs):
+        raise TypeError(f"{self.model.__name__} rows cannot be changed.")
+
+    def delete(self):
+        raise TypeError(f"{self.model.__name__} rows cannot be deleted.")
+
+
+class AppendOnlyModel(models.Model):
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise TypeError(f"{type(self).__name__} rows cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise TypeError(f"{type(self).__name__} rows cannot be deleted.")
+
+
+class AuditEvent(AppendOnlyModel):
+    """Account audit (plan, section 11): who did what to which account, and where."""
+
+    class Action(models.TextChoices):
+        INVITATION_SENT = "invitation_sent", _("Invitation sent")
+        RECOVERY_LINK_SENT = "recovery_link_sent", _("Recovery link sent")
+        PASSWORD_SET = "password_set", _("Password set")
+        PASSWORD_CHANGED = "password_changed", _("Password changed")
+        MEMBERSHIP_CREATED = "membership_created", _("Membership created")
+        MEMBERSHIP_CHANGED = "membership_changed", _("Membership changed")
+        MEMBERSHIP_ENDED = "membership_ended", _("Membership ended")
+        MEMBERSHIP_DELETED = "membership_deleted", _("Membership deleted")
+        ACCOUNT_DEACTIVATED = "account_deactivated", _("Account deactivated")
+        ACCOUNT_REACTIVATED = "account_reactivated", _("Account reactivated")
+        TWO_FACTOR_LINK_SENT = "two_factor_link_sent", _("Two-factor setup link sent")
+        TWO_FACTOR_LINK_FAILED = "two_factor_link_failed", _("Two-factor setup link not sent")
+        TWO_FACTOR_ENABLED = "two_factor_enabled", _("Two-factor authentication enabled")
+        TWO_FACTOR_NOTICE_SENT = "two_factor_notice_sent", _("Two-factor confirmation sent")
+        TWO_FACTOR_NOTICE_FAILED = "two_factor_notice_failed", _("Two-factor confirmation not sent")
+        TWO_FACTOR_RESET = "two_factor_reset", _("Two-factor authentication reset")
+        LOGIN_FAILED = "login_failed", _("Failed login")
+        TWO_FACTOR_FAILED = "two_factor_failed", _("Failed two-factor code")
+
+    created_at = models.DateTimeField(_("date and time"), default=timezone.now, db_index=True)
+    action = models.CharField(_("action"), max_length=40, choices=Action)
+    # Empty when nobody was signed in (a failed login) or the server did it (a management command).
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("done by"),
+    )
+    target = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+        verbose_name=_("account"),
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+        verbose_name=_("location"),
+    )
+    # The address typed in a failed login, which may not belong to any account.
+    email = models.EmailField(_("email address"), blank=True)
+    # {"before": {...}, "after": {...}} or other details of the action.
+    details = models.JSONField(_("details"), default=dict, blank=True)
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("account audit event")
+        verbose_name_plural = _("account audit events")
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["email", "action", "created_at"])]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M} · {self.get_action_display()}"

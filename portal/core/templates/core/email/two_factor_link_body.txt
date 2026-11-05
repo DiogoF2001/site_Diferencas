@@ -1,0 +1,8 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with name=user.full_name %}Hello, {{ name }},{% endblocktranslate %}
+
+{% blocktranslate with role=membership.get_role_display location=membership.location.name start=membership.start_date|date:"SHORT_DATE_FORMAT" %}You have the role {{ role }} at {{ location }} from {{ start }}. This role requires two-factor authentication. You can set it up at this link, with your current password and an authenticator app:{% endblocktranslate %}
+
+{{ link }}
+
+{% blocktranslate %}The link expires after {{ hours }} hours. If you have signed in to the portal before, you can also set it up after signing in, until {{ grace_days }} days after the role starts.{% endblocktranslate %}
+{% endautoescape %}

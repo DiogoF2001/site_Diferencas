@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.postgres",
     "django.contrib.staticfiles",
+    "django_otp",
+    "django_otp.plugins.otp_totp",
     "core",
     "salas",
 ]
@@ -46,7 +48,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "core.middleware.TwoFactorMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -63,6 +67,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.two_factor_notice",
             ],
         },
     },
@@ -83,6 +88,10 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = "core.User"
+AUTHENTICATION_BACKENDS = ["core.backends.MembershipBackend"]
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {
@@ -102,6 +111,40 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Sessions end after a working day, or when the browser closes.
+SESSION_COOKIE_AGE = int(env("PORTAL_SESSION_HOURS", "8")) * 3600
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Invitations and recovery links share Django's one-time token, valid for 48 hours.
+PASSWORD_RESET_TIMEOUT = 48 * 3600
+# Off until the centre decides otherwise: for now only the location's managers send recovery links.
+PORTAL_SELF_PASSWORD_RESET = env_bool("PORTAL_SELF_PASSWORD_RESET")
+# Failed logins per email address within the window, after which that address is locked out.
+PORTAL_LOGIN_MAX_FAILURES = int(env("PORTAL_LOGIN_MAX_FAILURES", "5"))
+PORTAL_LOGIN_LOCKOUT_MINUTES = int(env("PORTAL_LOGIN_LOCKOUT_MINUTES", "15"))
+# Invitation and recovery emails per account per hour, whoever asks for them.
+PORTAL_ACCOUNT_EMAILS_PER_HOUR = int(env("PORTAL_ACCOUNT_EMAILS_PER_HOUR", "3"))
+# Days from the start of a role requiring 2FA during which someone who signed in before may still
+# sign in with the password alone, only to set 2FA up (plan, section 5).
+PORTAL_TWO_FACTOR_GRACE_DAYS = int(env("PORTAL_TWO_FACTOR_GRACE_DAYS", "7"))
+
+OTP_TOTP_ISSUER = "Portal Diferenças"
+
+# Any SMTP server; in development the messages go to the console.
+if DEBUG and not os.environ.get("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "portal@localhost"
+else:
+    EMAIL_HOST = env("EMAIL_HOST")
+    EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+    EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL")
+    EMAIL_TIMEOUT = 10
+    DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # The health endpoint is probed over plain HTTP from inside the container.
 SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]

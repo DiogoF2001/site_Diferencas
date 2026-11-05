@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Sign in" %}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Sign in" %}</h1>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "core/_form_fields.html" %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary" type="submit">{% translate "Sign in" %}</button>
+  </form>
+  {% if self_password_reset %}
+    <p><a href="{% url 'password_reset' %}">{% translate "Forgot your password?" %}</a></p>
+  {% else %}
+    <p class="hint">{% translate "Forgot your password? Ask your location's secretariat for a new link." %}</p>
+  {% endif %}
+{% endblock %}

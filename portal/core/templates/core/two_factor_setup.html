@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Two-factor authentication" %}{% endblock %}
+{% block main_class %} narrow{% endblock %}
+{% block content %}
+  <h1>{% translate "Two-factor authentication" %}</h1>
+  {% if enrolling %}
+    <p>{% translate "Your password is saved. One last step: your role requires two-factor authentication, so set it up now. Without it, you will not be able to sign in and will need a new link." %}</p>
+  {% endif %}
+  <p class="lead">{% translate "Scan the code with an authenticator app, such as Aegis or 2FAS, and enter the 6 digits it shows." %}</p>
+  <div class="card">
+    <div class="qr">{{ qr_code }}</div>
+    <p>{% translate "Or type this key into the app:" %} <span class="secret">{{ secret }}</span></p>
+  </div>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {% include "core/_form_fields.html" %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button class="btn btn-primary" type="submit">{% translate "Turn on" %}</button>
+  </form>
+{% endblock %}

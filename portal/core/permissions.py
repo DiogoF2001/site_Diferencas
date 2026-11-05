@@ -5,16 +5,21 @@ Views ask `has_perm_in(user, "salas.approve", location)` and never look at role 
 permission codes raise, so that a typo is a bug in the tests and not a silent refusal.
 """
 
+import datetime
 import enum
 from dataclasses import dataclass
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import QuerySet
 from django.utils import timezone
+from django_otp import user_has_device
 
 from core.models import Location, Membership, Mentorship, Role, Subrole, User
 
 ROLE_LEVELS = {Role.PROFESSIONAL: 1, Role.SECRETARIAT: 2, Role.COORDINATION: 3}
+# Plan, section 5: 2FA is mandatory for the admin and for anyone who manages a location.
+TWO_FACTOR_ROLES = frozenset({Role.SECRETARIAT, Role.COORDINATION})
 
 MANAGE_MEMBERS = "core.manage_members"
 
@@ -181,6 +186,101 @@ def can_manage_account(actor, target):
         and target_levels[location.pk] <= role_level_in(actor, location)
         for location in locations
     )
+
+
+def has_portal_access(user):
+    """Whether the account may sign in: the admin, or an active membership in an active location.
+
+    The end date of a membership is the last day with access, in Lisbon, so an intern's access
+    ends on its own at midnight. Someone whose memberships have yet to start can set a password
+    from the invitation, but only signs in from the start date.
+    """
+    if is_admin(user):
+        return True
+    if not _can_hold_memberships(user):
+        return False
+    return Membership.objects.active_on().filter(user=user, location__is_active=True).exists()
+
+
+def requires_two_factor(user):
+    """Counted from the membership dates alone: more 2FA never takes access away from anyone."""
+    if is_admin(user):
+        return True
+    if not _can_hold_memberships(user):
+        return False
+    return Membership.objects.active_on().filter(user=user, role__in=TWO_FACTOR_ROLES).exists()
+
+
+def lacks_required_two_factor(user):
+    """Staff whose role requires 2FA and who have no device yet. The admin is never one of them:
+    it sets 2FA up after signing in (ensure_admin, reset_2fa).
+    """
+    return not is_admin(user) and requires_two_factor(user) and not user_has_device(user)
+
+
+def two_factor_grace_ends(user):
+    """The first day without the grace period, or None when it does not apply or is over.
+
+    Plan, section 5: when a role that requires 2FA starts, someone without a device keeps signing
+    in with the password for PORTAL_TWO_FACTOR_GRACE_DAYS, counted from the start date as day 1,
+    but only to set 2FA up. Counted from the earliest of those roles still active.
+    """
+    if not lacks_required_two_factor(user):
+        return None
+    memberships = Membership.objects.active_on().filter(user=user, role__in=TWO_FACTOR_ROLES)
+    start = min(memberships.values_list("start_date", flat=True))
+    ends = start + datetime.timedelta(days=settings.PORTAL_TWO_FACTOR_GRACE_DAYS)
+    return ends if timezone.localdate() < ends else None
+
+
+def may_log_in_without_two_factor(user):
+    """Checked at login, before it updates last_login.
+
+    Without a device, staff sign in with the password alone only within the grace period and only
+    if they had signed in before; an account that never did sets 2FA up through its link.
+    """
+    if not lacks_required_two_factor(user):
+        return True
+    return user.last_login is not None and two_factor_grace_ends(user) is not None
+
+
+def upcoming_two_factor_roles(user):
+    """Future roles that will require 2FA from someone with no device, for the portal's notice."""
+    if not _can_hold_memberships(user) or user_has_device(user):
+        return Membership.objects.none()
+    return (
+        Membership.objects.filter(
+            user=user, role__in=TWO_FACTOR_ROLES, start_date__gt=timezone.localdate()
+        )
+        .select_related("location")
+        .order_by("start_date")
+    )
+
+
+def enrols_two_factor_by_link(user):
+    """Whether the link's password step goes on to set up 2FA.
+
+    Future roles count too, so that someone invited ahead of the start date can sign in on it.
+    """
+    if not _can_hold_memberships(user) or user_has_device(user):
+        return False
+    memberships = Membership.objects.filter(user=user, role__in=TWO_FACTOR_ROLES)
+    return memberships.overlapping(timezone.localdate()).exists()
+
+
+def members_of(location) -> QuerySet:
+    """People with an active or future membership in the location."""
+    memberships = Membership.objects.filter(location=location).overlapping(timezone.localdate())
+    return User.objects.filter(pk__in=memberships.values("user"))
+
+
+def can_send_recovery_link(actor, target, location):
+    """Plan, section 5: whoever manages members in a location where the target is or will be."""
+    if target.is_superuser or not target.is_active:
+        return False
+    if not has_perm_in(actor, MANAGE_MEMBERS, location):
+        return False
+    return members_of(location).filter(pk=target.pk).exists()
 
 
 def mentees_of(user, location) -> QuerySet:

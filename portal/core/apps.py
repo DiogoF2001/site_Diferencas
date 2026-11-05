@@ -6,4 +6,6 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self):
+        from core import audit  # noqa: F401  (connects the failed-login signal)
+
         autodiscover_modules("permissions")

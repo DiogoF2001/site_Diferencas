@@ -130,6 +130,15 @@ app expect_denied "app cannot drop tables" "DROP TABLE core_location"
 app expect_denied "app cannot alter tables" "ALTER TABLE core_location ADD COLUMN check_app int"
 app expect_denied "app cannot truncate tables" "TRUNCATE core_location CASCADE"
 app expect_denied "app cannot create schemas" "CREATE SCHEMA check_app"
+app expect_allowed "app can add and read account audit events" \
+    "BEGIN;
+     INSERT INTO core_auditevent (created_at, action, email, details)
+         VALUES (now(), 'login_failed', 'x@example.test', '{}');
+     SELECT count(*) FROM core_auditevent;
+     ROLLBACK"
+app expect_denied "app cannot change account audit events" "UPDATE core_auditevent SET email = ''"
+app expect_denied "app cannot delete account audit events" "DELETE FROM core_auditevent"
+app expect_denied "app cannot truncate account audit events" "TRUNCATE core_auditevent"
 
 echo "== Admin account"
 if compose run --rm create-admin >/dev/null && compose run --rm create-admin >/dev/null; then
@@ -171,11 +180,46 @@ expect_equal "translations were compiled in the image" polo \
     "$(compose exec -T app python manage.py shell --verbosity 0 --command \
         'from core.models import Location; print(Location._meta.verbose_name)')"
 
+# A secretariat member with an invitation link, as the members page would send it.
+staff_link=$(compose exec -T app python manage.py shell --verbosity 0 --command '
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from core.models import Location, Membership, Role, User
+from core.tokens import password_link_token
+location = Location.objects.create(name="Polo de verificação")
+user = User.objects.create_user("secretariado@example.test", "Secretariado")
+Membership.objects.create(
+    user=user, location=location, role=Role.SECRETARIAT, start_date=timezone.localdate()
+)
+uid = urlsafe_base64_encode(force_bytes(user.pk))
+print(reverse("password_set", args=[uid, password_link_token.make_token(user)]))
+# Someone who has signed in before as a professional and whose secretariat role starts today.
+other = User.objects.create_user(
+    "acumula@example.test", "Acumula", "outra-palavra-passe-longa-e-rara",
+    last_login=timezone.now(),
+)
+Membership.objects.create(
+    user=other, location=location, role=Role.PROFESSIONAL, subrole="resident",
+    start_date=timezone.localdate(),
+)
+Membership.objects.create(
+    user=other, location=location, role=Role.SECRETARIAT, start_date=timezone.localdate()
+)
+')
+
 if output=$(compose exec -T -e PORTAL_ADMIN_EMAIL="$PORTAL_ADMIN_EMAIL" \
-    -e PORTAL_ADMIN_PASSWORD="$PORTAL_ADMIN_PASSWORD" app python - 2>&1 <<'PY'
+    -e PORTAL_ADMIN_PASSWORD="$PORTAL_ADMIN_PASSWORD" -e STAFF_LINK="$staff_link" \
+    app python - 2>&1 <<'PY'
+import base64
+import hashlib
+import hmac
 import http.cookies
 import os
 import re
+import struct
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -210,11 +254,26 @@ def fetch(path, data=None, **headers):
     return response
 
 
-login_page = fetch("/admin/login/")
+def totp(secret):
+    key = base64.b32decode(secret)
+    digest = hmac.new(key, struct.pack(">Q", int(time.time()) // 30), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    return f"{(struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1_000_000:06d}"
+
+
+def csrf(html):
+    return re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html).group(1)
+
+
+backoffice_login = fetch("/admin/login/?next=/admin/")
+assert backoffice_login.status == 302, f"backoffice login: {backoffice_login.status}"
+assert backoffice_login.headers["Location"].startswith("/conta/entrar/"), "not the portal login"
+
+login_page = fetch("/conta/entrar/")
 assert login_page.status == 200, f"login page: {login_page.status}"
 html = login_page.read().decode()
 
-stylesheet = re.search(r'/static/admin/css/base\.[0-9a-f]{12}\.css', html)
+stylesheet = re.search(r'/static/core/portal\.[0-9a-f]{12}\.css', html)
 assert stylesheet, "the login page does not link a hashed stylesheet"
 css = fetch(stylesheet.group(0), **{"Accept-Encoding": "gzip"})
 assert css.status == 200, f"stylesheet: {css.status}"
@@ -223,23 +282,130 @@ assert css.headers["Content-Encoding"] == "gzip", css.headers["Content-Encoding"
 assert "immutable" in css.headers["Cache-Control"], css.headers["Cache-Control"]
 assert fetch("/static/admin/css/nao-existe.css").status == 404, "missing file"
 
-token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html).group(1)
 login = fetch(
-    "/admin/login/",
+    "/conta/entrar/",
     {
-        "csrfmiddlewaretoken": token,
+        "csrfmiddlewaretoken": csrf(html),
         "username": os.environ["PORTAL_ADMIN_EMAIL"],
         "password": os.environ["PORTAL_ADMIN_PASSWORD"],
         "next": "/admin/",
     },
-    Referer=f"https://{HOST}/admin/login/",
+    Referer=f"https://{HOST}/conta/entrar/",
 )
 assert login.status == 302, f"login: {login.status}"
-assert fetch("/admin/").status == 200, "backoffice after login"
+
+# 2FA is mandatory for the admin: the backoffice waits until it is set up.
+before = fetch("/admin/")
+assert before.status == 302, f"backoffice before 2FA: {before.status}"
+setup_url = before.headers["Location"]
+assert setup_url.startswith("/conta/2fa/configurar/"), setup_url
+setup = fetch(setup_url).read().decode()
+secret = re.search(r'class="secret">([A-Z2-7]+)<', setup).group(1)
+confirmed = fetch(
+    setup_url,
+    {"csrfmiddlewaretoken": csrf(setup), "token": totp(secret), "next": "/admin/"},
+    Referer=f"https://{HOST}{setup_url}",
+)
+assert confirmed.status == 302, f"2FA setup: {confirmed.status}"
+assert fetch("/admin/").status == 200, "backoffice after 2FA"
+
+# Secretariat: 2FA is set up in the invitation link, right after the password.
+cookies.clear()
+STAFF = {"username": "secretariado@example.test", "password": "uma-palavra-passe-longa-e-rara"}
+link = fetch(os.environ["STAFF_LINK"])
+assert link.status == 302, f"invitation link: {link.status}"
+set_url = link.headers["Location"]
+set_page = fetch(set_url).read().decode()
+password_set = fetch(
+    set_url,
+    {
+        "csrfmiddlewaretoken": csrf(set_page),
+        "new_password1": STAFF["password"],
+        "new_password2": STAFF["password"],
+    },
+    Referer=f"https://{HOST}{set_url}",
+)
+assert password_set.status == 302, f"password set: {password_set.status}"
+enrol_url = password_set.headers["Location"]
+assert enrol_url == "/conta/2fa/ativar/", enrol_url
+enrol = fetch(enrol_url).read().decode()
+staff_secret = re.search(r'class="secret">([A-Z2-7]+)<', enrol).group(1)
+
+# Halfway through, the password alone does not sign in.
+saved = http.cookies.SimpleCookie(cookies)
+cookies.clear()
+login_page = fetch("/conta/entrar/").read().decode()
+refused = fetch(
+    "/conta/entrar/",
+    {"csrfmiddlewaretoken": csrf(login_page), **STAFF},
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert refused.status == 200, f"password-only staff login: {refused.status}"
+assert "autenticação de dois fatores" in refused.read().decode(), "no 2FA message"
+cookies.clear()
+cookies.update(saved)
+
+enrolled = fetch(
+    enrol_url,
+    {"csrfmiddlewaretoken": csrf(enrol), "token": totp(staff_secret)},
+    Referer=f"https://{HOST}{enrol_url}",
+)
+assert enrolled.status == 302, f"2FA enrolment: {enrolled.status}"
+assert enrolled.headers["Location"] == "/conta/entrar/", enrolled.headers["Location"]
+
+login_page = fetch("/conta/entrar/").read().decode()
+login = fetch(
+    "/conta/entrar/",
+    {"csrfmiddlewaretoken": csrf(login_page), **STAFF},
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert login.status == 302, f"staff login: {login.status}"
+verify_url = fetch("/").headers["Location"]
+assert verify_url.startswith("/conta/2fa/verificar/"), verify_url
+verify_page = fetch(verify_url).read().decode()
+# The code used at enrolment cannot be used again: wait for the next one.
+time.sleep(30 - time.time() % 30 + 1)
+verified = fetch(
+    verify_url,
+    {"csrfmiddlewaretoken": csrf(verify_page), "token": totp(staff_secret)},
+    Referer=f"https://{HOST}{verify_url}",
+)
+assert verified.status == 302, f"staff 2FA code: {verified.status}"
+assert fetch("/").status == 200, "portal after the staff 2FA code"
+
+# Grace period: a new secretariat role for someone who signed in before, without 2FA.
+cookies.clear()
+login_page = fetch("/conta/entrar/").read().decode()
+login = fetch(
+    "/conta/entrar/",
+    {
+        "csrfmiddlewaretoken": csrf(login_page),
+        "username": "acumula@example.test",
+        "password": "outra-palavra-passe-longa-e-rara",
+    },
+    Referer=f"https://{HOST}/conta/entrar/",
+)
+assert login.status == 302, f"grace login: {login.status}"
+only_setup = fetch("/")
+assert only_setup.status == 302, f"portal during the grace period: {only_setup.status}"
+setup_url = only_setup.headers["Location"]
+assert setup_url.startswith("/conta/2fa/configurar/"), setup_url
+setup = fetch(setup_url).read().decode()
+grace_secret = re.search(r'class="secret">([A-Z2-7]+)<', setup).group(1)
+# The confirmation email cannot reach smtp.example.test here: it must not undo the 2FA.
+confirmed = fetch(
+    setup_url,
+    {"csrfmiddlewaretoken": csrf(setup), "token": totp(grace_secret)},
+    Referer=f"https://{HOST}{setup_url}",
+)
+assert confirmed.status == 302, f"grace 2FA setup: {confirmed.status}"
+assert fetch("/").status == 200, "portal after setting up 2FA in the grace period"
 PY
 ); then
-    pass "WhiteNoise serves the backoffice's hashed, compressed static files"
-    pass "the admin logs in to the backoffice, using the app's database user"
+    pass "WhiteNoise serves the portal's hashed, compressed static files"
+    pass "the admin logs in, sets up 2FA and opens the backoffice, using the app's database user"
+    pass "secretariat sets up 2FA in the invitation link and cannot sign in with the password alone"
+    pass "a new secretariat role within the grace period signs in only to set up 2FA"
 else
     fail "WhiteNoise and the backoffice login" "$output"
 fi

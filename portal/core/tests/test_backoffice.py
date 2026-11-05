@@ -1,9 +1,11 @@
 import pytest
 from django.contrib import admin
 from django.contrib.auth.models import Group
+from django.test import RequestFactory
 from django.urls import NoReverseMatch, reverse
 
 from core.models import Location, Membership, Role, User
+from core.tests.helpers import login_verified
 
 pytestmark = pytest.mark.django_db
 
@@ -22,7 +24,7 @@ def is_redirect_to_login(response):
 
 
 def test_admin_can_open_the_backoffice(client, admin_user):
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     assert client.get(reverse("admin:index")).status_code == 200
 
@@ -32,49 +34,60 @@ def test_anonymous_cannot_open_the_backoffice(client):
 
 
 def test_coordination_cannot_open_the_backoffice(client, coordinator):
-    client.force_login(coordinator)
+    login_verified(client, coordinator)
 
     assert is_redirect_to_login(client.get(reverse("admin:index")))
     assert is_redirect_to_login(client.get(reverse("admin:core_user_changelist")))
 
 
 def test_deactivated_admin_cannot_open_the_backoffice(client, admin_user):
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
     User.objects.update(is_active=False)
 
     assert is_redirect_to_login(client.get(reverse("admin:index")))
 
 
+def test_backoffice_login_sends_to_the_portal_login(client):
+    response = client.get(reverse("admin:login") + "?next=/admin/")
+
+    assert response.status_code == 302
+    assert response.url == reverse("login") + "?next=/admin/"
+
+
 def test_login_page_is_in_european_portuguese(client):
-    page = client.get(reverse("admin:login")).content.decode()
+    page = client.get(reverse("login")).content.decode()
 
     assert "Endereço de e-mail" in page
     assert "Palavra-passe" in page
     assert "Senha" not in page
 
 
-def test_admin_can_log_in_through_the_login_form(client, admin_user):
+def test_admin_logs_in_and_must_set_up_two_factor_before_the_backoffice(client, admin_user):
     response = client.post(
-        reverse("admin:login"),
+        reverse("login"),
         {"username": "ADMIN@example.test", "password": "palavra-longa-e-rara"},
     )
 
     assert response.status_code == 302
-    assert client.get(reverse("admin:index")).status_code == 200
+    response = client.get(reverse("admin:index"))
+    assert response.status_code == 302
+    assert response.url.startswith(reverse("two_factor_setup"))
 
 
-def test_coordination_cannot_log_in_through_the_login_form(client, coordinator):
-    response = client.post(
-        reverse("admin:login"), {"username": coordinator.email, "password": PASSWORD}
-    )
+def test_backoffice_refuses_the_admin_without_the_second_factor(client, admin_user):
+    # Even if the middleware were left out, the site itself asks for a verified session.
+    client.force_login(admin_user)
 
-    assert response.status_code == 200
-    assert "_auth_user_id" not in client.session
+    request = RequestFactory().get("/admin/")
+    request.user = admin_user
+    admin_user.is_verified = lambda: False
+
+    assert not admin.site.has_permission(request)
 
 
 def test_password_is_not_on_the_user_page_and_cannot_be_posted(client, admin_user, make_user):
     person = make_user(password=PASSWORD)
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
     url = reverse("admin:core_user_change", args=[person.pk])
 
     assert 'name="password' not in client.get(url).content.decode()
@@ -96,7 +109,7 @@ def test_password_is_not_on_the_user_page_and_cannot_be_posted(client, admin_use
 
 def test_there_is_no_view_to_set_another_persons_password(client, admin_user, make_user):
     person = make_user(password=PASSWORD)
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     with pytest.raises(NoReverseMatch):
         reverse("admin:auth_user_password_change", args=[person.pk])
@@ -107,7 +120,7 @@ def test_there_is_no_view_to_set_another_persons_password(client, admin_user, ma
 
 
 def test_user_created_in_the_backoffice_has_no_usable_password(client, admin_user):
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     response = client.post(
         reverse("admin:core_user_add"),
@@ -127,7 +140,7 @@ def test_user_created_in_the_backoffice_has_no_usable_password(client, admin_use
 
 def test_nobody_can_be_made_admin_in_the_backoffice(client, admin_user, make_user):
     person = make_user()
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     client.post(
         reverse("admin:core_user_change", args=[person.pk]),
@@ -145,7 +158,7 @@ def test_nobody_can_be_made_admin_in_the_backoffice(client, admin_user, make_use
 
 def test_normal_account_can_be_deactivated_in_the_backoffice(client, admin_user, make_user):
     person = make_user()
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     client.post(
         reverse("admin:core_user_change", args=[person.pk]),
@@ -157,7 +170,7 @@ def test_normal_account_can_be_deactivated_in_the_backoffice(client, admin_user,
 
 
 def test_admin_cannot_be_deactivated_in_the_backoffice(client, admin_user):
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     client.post(
         reverse("admin:core_user_change", args=[admin_user.pk]),
@@ -170,7 +183,7 @@ def test_admin_cannot_be_deactivated_in_the_backoffice(client, admin_user):
 
 def test_accounts_cannot_be_deleted_in_the_backoffice(client, admin_user, make_user):
     person = make_user()
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     response = client.post(reverse("admin:core_user_delete", args=[person.pk]), {"post": "yes"})
     client.post(
@@ -184,7 +197,7 @@ def test_accounts_cannot_be_deleted_in_the_backoffice(client, admin_user, make_u
 
 def test_backoffice_rejects_an_invalid_membership(client, admin_user, make_user, location):
     person = make_user()
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     response = client.post(
         reverse("admin:core_membership_add"),
@@ -202,7 +215,7 @@ def test_backoffice_rejects_an_invalid_membership(client, admin_user, make_user,
 
 
 def test_backoffice_saves_a_location(client, admin_user):
-    client.force_login(admin_user)
+    login_verified(client, admin_user)
 
     response = client.post(
         reverse("admin:core_location_add"), {"name": "Polo C", "address": "", "is_active": "on"}
