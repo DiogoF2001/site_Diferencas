@@ -34,7 +34,7 @@ deploy/      Docker Compose, Caddyfile, scripts de backup
 - Interface: templates Django + **HTMX**. Calendário: **EventCalendar (vkurko, licença MIT)**. Não usar o FullCalendar Premium.
 - Tarefas agendadas: um serviço `worker` separado.
 - Testes: `pytest` + `pytest-django`. Lint e formatação: `ruff`.
-- Docker Compose com os serviços: `proxy` (Caddy), `app` (Gunicorn), `worker`, `db`, `backup`.
+- Docker Compose com os serviços: `proxy` (Caddy), `app` (Gunicorn), `worker`, `db`, `backup`, mais o serviço pontual `migrate` (perfil `ops`), que só corre as migrações.
 - Cada dependência nova precisa de justificação no PR. Só licenças livres, e nada que dependa de serviços pagos (Google, Microsoft, SaaS).
 
 ## Idioma
@@ -79,4 +79,38 @@ deploy/      Docker Compose, Caddyfile, scripts de backup
 
 ## Comandos
 
-Esta secção é preenchida na tarefa 1 do roadmap: arrancar o ambiente, correr testes, lint, migrações e criar o admin.
+Corre tudo a partir da raiz do repositório e dentro do Docker. O ambiente de desenvolvimento não precisa de `.env`. Se o teu UID não for 1000, exporta antes `HOST_UID=$(id -u) HOST_GID=$(id -g)`.
+
+```bash
+# Desenvolvimento: arrancar (http://127.0.0.1:8000/healthz/, com recarregamento automático)
+docker compose -f deploy/docker-compose.dev.yml up --build
+
+# Testes
+docker compose -f deploy/docker-compose.dev.yml run --rm app pytest
+
+# Lint e formatação
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app ruff check .
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app ruff format --check .
+
+# Migrações em desenvolvimento
+docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py makemigrations
+docker compose -f deploy/docker-compose.dev.yml run --rm app python manage.py migrate
+
+# Auditoria de dependências
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps app pip-audit --require-hashes --disable-pip -r requirements/base.txt -r requirements/dev.txt
+
+# Fixar dependências, depois de alterar base.in ou dev.in (por esta ordem)
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps -w /app/requirements app pip-compile --generate-hashes --allow-unsafe --strip-extras --output-file=base.txt base.in
+docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps -w /app/requirements app pip-compile --generate-hashes --allow-unsafe --strip-extras --output-file=dev.txt dev.in
+
+# Configuração de produção (precisa de deploy/.env, copiado de deploy/.env.example)
+docker compose -f deploy/docker-compose.yml run --rm --no-deps app python manage.py check --deploy --fail-level WARNING
+docker compose -f deploy/docker-compose.yml up -d --build --wait
+docker compose -f deploy/docker-compose.yml --profile ops run --rm migrate
+docker compose -f deploy/docker-compose.yml exec backup /usr/local/bin/backup.sh once
+```
+
+- Usa sempre `--fail-level WARNING` no `check --deploy`. Sem esta opção, os avisos não fazem o comando falhar.
+- As migrações em produção correm só pelo serviço `migrate`, com o utilizador dono das tabelas. A `app` e o `worker` usam `PORTAL_DB_USER`, que não é dono de nenhuma tabela.
+- O comando para criar o admin chega na tarefa 2.
+- O Dependabot não atualiza a imagem do Postgres em `.github/workflows/ci.yml`. A CI falha até essa linha ser atualizada à mão para a mesma versão.

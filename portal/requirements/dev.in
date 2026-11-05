@@ -1,0 +1,7 @@
+-c base.txt
+-r base.in
+pip-audit
+pip-tools
+pytest
+pytest-django
+ruff

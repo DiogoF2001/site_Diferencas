@@ -236,6 +236,8 @@ As datas e horas são guardadas em UTC e mostradas na hora de Lisboa.
 - **db:** PostgreSQL;
 - **backup:** cópia diária encriptada da base de dados, guardada fora do servidor, com teste de reposição todos os meses.
 
+Há também um serviço pontual, **migrate**, que só corre as migrações e depois termina. Usa o utilizador da base de dados dono das tabelas; a app e o worker usam outro, sem posse de tabelas, para que as regras de "só acrescentar" da secção 11 não possam ser contornadas a partir da aplicação.
+
 Os segredos (incluindo os do admin) ficam num ficheiro de ambiente fora do repositório.
 
 ### Opções (decisão adiada)

@@ -9,13 +9,13 @@ HTML estático em `prototipo/`, com dados fictícios, para validar com o secreta
 - [ ] Identidade visual do novo site (logótipo original, azuis e verde-lima, fonte Atkinson Hyperlegible).
 
 ## 1. Esqueleto e infraestrutura
-- [ ] Projeto Django 5.2 LTS em `portal/`, com a configuração lida de variáveis de ambiente, idioma `pt-pt` e fuso `Europe/Lisbon`.
-- [ ] `deploy/docker-compose.yml` com `proxy` (Caddy), `app` (Gunicorn), `worker`, `db` (PostgreSQL) e `backup` (pg_dump diário encriptado). Variante de desenvolvimento com hot reload.
-- [ ] `.env.example`, `.gitignore`, endpoint de healthcheck.
-- [ ] `pytest`, `pytest-django`, `ruff` configurados.
-- [ ] GitHub Actions: lint, testes com Postgres em serviço, `check --deploy` e `pip-audit` em cada PR.
-- [ ] Dependabot (pip, Docker, GitHub Actions).
-- [ ] Secção "Comandos" do `CLAUDE.md` e um README com o arranque local.
+- [x] Projeto Django 5.2 LTS em `portal/`, com a configuração lida de variáveis de ambiente, idioma `pt-pt` e fuso `Europe/Lisbon`.
+- [x] `deploy/docker-compose.yml` com `proxy` (Caddy), `app` (Gunicorn), `worker`, `db` (PostgreSQL) e `backup` (pg_dump diário encriptado). Variante de desenvolvimento com hot reload.
+- [x] `.env.example`, `.gitignore`, endpoint de healthcheck.
+- [x] `pytest`, `pytest-django`, `ruff` configurados.
+- [x] GitHub Actions: lint, testes com Postgres em serviço, `check --deploy` e `pip-audit` em cada PR.
+- [x] Dependabot (pip, Docker, GitHub Actions).
+- [x] Secção "Comandos" do `CLAUDE.md` e um README com o arranque local.
 
 ## 2. Núcleo: utilizadores, polos e filiações
 - [ ] Utilizador personalizado com login por e-mail (único).

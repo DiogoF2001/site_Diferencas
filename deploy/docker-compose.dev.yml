@@ -1,0 +1,54 @@
+# Development only: runs without a .env and every value here is fictitious.
+name: diferencas-dev
+
+x-portal-dev: &portal-dev
+  image: diferencas-portal:dev
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: dev
+  init: true
+  user: ${HOST_UID:-1000}:${HOST_GID:-1000}
+  environment:
+    HOME: /tmp
+    DJANGO_SECRET_KEY: dev-only-not-a-secret
+    DJANGO_DEBUG: "1"
+    DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+    DB_NAME: portal
+    DB_USER: portal
+    DB_PASSWORD: dev-only-not-a-secret
+    WORKER_INTERVAL_SECONDS: "5"
+  volumes:
+    - ../portal:/app
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *portal-dev
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    ports:
+      - 127.0.0.1:8000:8000
+
+  worker:
+    <<: *portal-dev
+    command: ["python", "manage.py", "runworker", "--autoreload"]
+
+  db:
+    image: postgres:18.6-trixie@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
+    environment:
+      POSTGRES_DB: portal
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: dev-only-not-a-secret
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=pt-PT
+    volumes:
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal -d portal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:
