@@ -1,7 +1,7 @@
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["core"]
+testpaths = ["core", "salas"]
 addopts = "--strict-markers -ra"
 
 [tool.ruff]

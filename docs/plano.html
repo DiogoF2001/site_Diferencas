@@ -185,13 +185,17 @@
   <p><small>* Inclui as reservas em que a pessoa é titular ou participante.</small></p>
   <p>A área técnica inclui os logs técnicos, o estado do sistema, a configuração do SMTP e dos segredos, a criação de polos, as funcionalidades que se ligam e desligam e um modo "ver como utilizador" (só de leitura e registado).</p>
 
+  <p><strong>Polo inativo:</strong> enquanto um polo estiver inativo, as filiações nesse polo não dão nenhuma permissão. O Admin mantém o acesso, para o poder gerir e reativar. As filiações não mudam, por isso reativar o polo repõe tudo.</p>
+
+  <p><strong>Marcação direta e titular:</strong> o secretariado e a coordenação, com a permissão de marcar diretamente, podem marcar com qualquer membro ativo do polo como titular. Isto usa a permissão deles, não o mecanismo "em nome de outra pessoa" do Admin, que continua a ser só do Admin.</p>
+
   <h3>Regras de gestão de contas</h3>
   <ul>
     <li><strong>Acesso a um polo:</strong> uma pessoa só tem acesso a um polo depois de o secretariado ou a coordenação <em>desse</em> polo lhe criar uma filiação lá.</li>
     <li><strong>Até que papel se pode atribuir:</strong> cada pessoa só atribui papéis até ao seu próprio nível no polo. O secretariado pode criar uma conta de secretariado do início ao fim, sem precisar do admin.</li>
     <li><strong>E-mail já registado:</strong> cria-se apenas a nova filiação. Quem gere o polo B não vê as reservas nem a atividade dessa pessoa noutros polos.</li>
     <li><strong>Palavras-passe:</strong> ninguém define a palavra-passe de outra pessoa. Só se pode enviar um link de recuperação para o e-mail dela.</li>
-    <li><strong>Ações sobre a conta inteira:</strong> desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em <em>todos</em> os polos onde ela está. Caso contrário, só se pode removê-la do próprio polo.</li>
+    <li><strong>Ações sobre a conta inteira:</strong> desativar a conta toda ou repor o 2FA exige um papel igual ou superior ao dessa pessoa em <em>todos</em> os polos onde ela tem uma filiação ativa ou futura; as filiações terminadas não contam. Caso contrário, só se pode removê-la do próprio polo.</li>
     <li><strong>Listagem da coordenação:</strong> a coordenação tem uma lista dos profissionais do seu polo, com os papéis de cada um nesse polo. Opcionalmente, mostra também os papéis e polos de cada pessoa noutros polos, mas nunca a atividade lá. A lista pode ser exportada em CSV.</li>
   </ul>
 
@@ -206,6 +210,7 @@
     <li><strong>Admin "hardcoded":</strong> a conta existe sempre, mas é criada na instalação a partir de segredos do servidor. Nunca fica no código nem no repositório. Tem 2FA obrigatório e é usada só para configuração e emergências.</li>
     <li><strong>2FA:</strong> obrigatório para Admin, Coordenação e Secretariado, e recomendado para Profissionais. Funciona com qualquer app TOTP gratuita (Aegis, 2FAS…) ou com passkeys.</li>
     <li><strong>Saída de pessoas:</strong> as contas são desativadas e nunca apagadas, para manter o histórico. As filiações de estagiárias têm data de fim, e o acesso termina sozinho: a data de fim é o último dia com acesso, na hora de Lisboa.</li>
+    <li><strong>Links de recuperação:</strong> pode enviar um link de recuperação quem tiver a permissão de gerir membros num polo onde a pessoa tenha uma filiação ativa ou futura. O envio tem um limite e fica na auditoria de contas.</li>
     <li><strong>E-mail:</strong> usa qualquer servidor SMTP, de preferência o do alojamento de e-mail que o centro já tem. Não se monta servidor de e-mail próprio, porque os e-mails tenderiam a ir parar ao spam. Há também notificações dentro do portal.</li>
   </ul>
 </section>
@@ -307,10 +312,11 @@
 <section id="historicos">
   <h2>11. Históricos e auditoria</h2>
   <p>Os registos são só de acrescentar. A aplicação não os edita nem apaga, e o utilizador da base de dados com que ela trabalha não tem permissão para alterar nem apagar nessas tabelas.</p>
+  <p>No histórico das reservas, o "em nome de" fica registado sempre que o titular é diferente de quem faz a ação, seja o Admin, o secretariado ou a coordenação.</p>
   <div class="tabela"><table>
     <tr><th>Registo</th><th>Conteúdo</th><th>Quem vê</th></tr>
     <tr><td>Histórico de cada pedido ou reserva</td><td>Cada evento (criação, edição, aprovação, recusa, mudança de sala ou hora, participantes, divisão de horas, cancelamento), com data e hora, utilizador, "em nome de" quando aplicável, e o valor antes e depois</td><td>O titular e os participantes; o secretariado e a coordenação do polo; o admin</td></tr>
-    <tr><td>Auditoria de contas</td><td>Convites, filiações, papéis, orientações, desativações, reposições de 2FA e logins falhados</td><td>A coordenação (membros do seu polo) e o admin</td></tr>
+    <tr><td>Auditoria de contas</td><td>Convites, filiações, papéis, orientações, desativações, reposições de 2FA, envios de links de recuperação e logins falhados</td><td>A coordenação (membros do seu polo) e o admin</td></tr>
     <tr><td>Logs técnicos</td><td>Erros, desempenho e tarefas agendadas</td><td>Só o admin</td></tr>
   </table></div>
   <p>As datas e horas são guardadas em UTC e mostradas na hora de Lisboa.</p>
